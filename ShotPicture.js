@@ -1,7 +1,6 @@
 //=============================================================================
 // RPG Maker MZ - ShotPicture
 //=============================================================================
-
 /*:
  * @target MZ
  * @plugindesc Fires a picture as a bullet.
@@ -268,7 +267,7 @@
 * 
 */
 
-/*:ja
+/*:
  * @target MZ
  * @plugindesc ピクチャを弾として発射します。
  * @author Rimu
@@ -706,11 +705,11 @@
     return overlappingPixels;
   }
 
-  let spritesP = [];
-  let sprites = [];
 
   // 元のterminate関数を保存
   const _Scene_Map_terminate = Scene_Map.prototype.terminate;
+  let spritesP = [];
+  let sprites = [];
 
   function toBoolean(str, def) {
     if (str === true || str === "true") {
@@ -834,12 +833,88 @@
       }
     }
 
+      // 一度だけupdateMainをオーバーライド
+  if (!Scene_Map.prototype._isUpdatedMainOverridden) {
     const _Scene_Map_updateMain = Scene_Map.prototype.updateMain;
     Scene_Map.prototype.updateMain = function () {
       _Scene_Map_updateMain.call(this);
       Scene_Map.prototype.updatekey();
+      updateShotPictureP()
     }
+    Scene_Map.prototype._isUpdatedMainOverridden = true;
+  }
 
+  
+  let hasCollisionOccurred = false;
+
+  function updateShotPictureP() {
+    spritesP.forEach((sprite) => {
+      if (!sprite) return;
+      sprite._elapsedTime += 1 / 60;
+      const easedTime = sprite._easingFunction(sprite._elapsedTime);
+      
+      // 弾の位置をイージング関数で更新
+      sprite._mapX = sprite._originX + sprite._moveX * easedTime;
+      sprite._mapY = sprite._originY + sprite._moveY * easedTime;
+  
+      sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
+      sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
+  
+      const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
+      const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
+      if ($gameMap.regionId(mapX, mapY) == params.DeleteWallP) {
+        SceneManager._scene.removeChild(sprite);
+        spritesP.splice(spritesP.indexOf(sprite), 1);
+        return;
+      }
+      
+      const player = $gamePlayer;
+      const playerSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
+      if (!playerSprite) {
+        return;
+      }
+  
+      if (transparencyCheckP == true) {
+        $gameMap.events().forEach(event => {
+          const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
+          if (eventSprite && targetP.includes(event.eventId())) {
+            const nottransparency = checkCollision(eventSprite, sprite);
+            if (nottransparency) {
+              if (deletebulletP == true) {
+                SceneManager._scene.removeChild(sprite);
+                spritesP.splice(spritesP.indexOf(sprite), 1);
+              }
+              if (hasCollisionOccurred) return;
+              $gameVariables.setValue(params.HitTargetP,event.eventId())
+              $gameTemp.reserveCommonEvent(hitcommonP);
+              $gameSwitches.setValue(hitswitchP, true);
+              hasCollisionOccurred = true;
+              return;
+            }
+          }
+        });
+      } else {
+        $gameMap.events().forEach(event => {
+          const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
+          if (eventSprite && targetP.includes(event.eventId())) {
+            const collisionPoints = checkCollision(eventSprite, sprite);
+            if (collisionPoints && collisionPoints.length > 0) {
+              if (deletebulletP == true) {
+                SceneManager._scene.removeChild(sprite);
+                spritesP.splice(spritesP.indexOf(sprite), 1);
+              }
+              if (hasCollisionOccurred) return;
+              $gameVariables.setValue(params.HitTargetP,event.eventId())
+              $gameTemp.reserveCommonEvent(hitcommonP);
+              $gameSwitches.setValue(hitswitchP, true);
+              hasCollisionOccurred = true;
+              return;
+            }
+          }
+        });
+      }
+    });
+  }
     Scene_Map.prototype.updatekey();
     const directions = {
       8: -Math.PI / 2,     // 下
@@ -927,7 +1002,7 @@
       const picY = playermapY + 0.5 + offsetY; // 弾を発射するY座標
       const scaleX = params.scaleYP * params.sizeXP;
       const scaleY = params.scaleYP;
-      spritesP = [];
+      const newSprites = [];
       for (let i = 0; i < numberP; i++) {
         const angleOffset = (i - (numberP - 1) / 2) * (spaceP * Math.PI / 180);
         const angle = baseAngle + angleOffset;
@@ -956,90 +1031,23 @@
         SceneManager._scene.addChild(sprite);
       }
 
-      let hasCollisionOccurred = false;
+      spritesP = spritesP.concat(newSprites); 
 
-      function updateShotPictureP() {
-        spritesP.forEach((sprite) => {
-          if (!sprite) return;
-          sprite._elapsedTime += 1 / 60;
-          const easedTime = sprite._easingFunction(sprite._elapsedTime);
-          
-          // 弾の位置をイージング関数で更新
-          sprite._mapX = sprite._originX + sprite._moveX * easedTime;
-          sprite._mapY = sprite._originY + sprite._moveY * easedTime;
+
       
-          sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
-          sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
-      
-          const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
-          const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
-          if ($gameMap.regionId(mapX, mapY) == params.DeleteWallP) {
-            SceneManager._scene.removeChild(sprite);
-            spritesP.splice(spritesP.indexOf(sprite), 1);
-            return;
-          }
-          
-          const player = $gamePlayer;
-          const playerSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
-          if (!playerSprite) {
-            return;
-          }
-      
-          if (transparencyCheckP == true) {
-            $gameMap.events().forEach(event => {
-              const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
-              if (eventSprite && targetP.includes(event.eventId())) {
-                const nottransparency = checkCollision(eventSprite, sprite);
-                if (nottransparency) {
-                  if (deletebulletP == true) {
-                    SceneManager._scene.removeChild(sprite);
-                    spritesP.splice(spritesP.indexOf(sprite), 1);
-                  }
-                  if (hasCollisionOccurred) return;
-                  $gameVariables.setValue(params.HitTargetP,event.eventId())
-                  $gameTemp.reserveCommonEvent(hitcommonP);
-                  $gameSwitches.setValue(hitswitchP, true);
-                  hasCollisionOccurred = true;
-                  return;
-                }
-              }
-            });
-          } else {
-            $gameMap.events().forEach(event => {
-              const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
-              if (eventSprite && targetP.includes(event.eventId())) {
-                const collisionPoints = checkCollision(eventSprite, sprite);
-                if (collisionPoints && collisionPoints.length > 0) {
-                  if (deletebulletP == true) {
-                    SceneManager._scene.removeChild(sprite);
-                    spritesP.splice(spritesP.indexOf(sprite), 1);
-                  }
-                  if (hasCollisionOccurred) return;
-                  $gameVariables.setValue(params.HitTargetP,event.eventId())
-                  $gameTemp.reserveCommonEvent(hitcommonP);
-                  $gameSwitches.setValue(hitswitchP, true);
-                  hasCollisionOccurred = true;
-                  return;
-                }
-              }
-            });
-          }
-        });
-      }
-      
-      const _Scene_Map_updateMain = Scene_Map.prototype.updateMain;
-      Scene_Map.prototype.updateMain = function () {
-        _Scene_Map_updateMain.call(this);
+      if (!Scene_Map.prototype._isTerminatedOverridden) {
+        const _Scene_Map_terminate = Scene_Map.prototype.terminate;
         Scene_Map.prototype.terminate = function () {
           _Scene_Map_terminate.call(this);
           spritesP = [];
-          sprites = []; // マップ移動時にスプライト配列をクリア
         };
-        updateShotPictureP();
-      };
-      
+        Scene_Map.prototype._isTerminatedOverridden = true;
+      }
+  
+      updateShotPictureP();
     }
   }
+  
 
   PluginManager.registerCommand(pluginName, "AddBullet", function (args) {
     const params = {
@@ -1178,7 +1186,7 @@
       baseAngle = Direction + Angle;
     }
   
-    sprites = [];
+    let sprites = [];
     for (let i = 0; i < number; i++) {
       const angleOffset = (i - (number - 1) / 2) * (space * Math.PI / 180);
       const angle = baseAngle + angleOffset;
