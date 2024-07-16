@@ -440,6 +440,8 @@
     return overlappingPixels;
   }
 
+  let spritesP = [];
+  let sprites = [];
 
   // 元のterminate関数を保存
   const _Scene_Map_terminate = Scene_Map.prototype.terminate;
@@ -659,7 +661,7 @@
       const picY = playermapY + 0.5 + offsetY; // 弾を発射するY座標
       const scaleX = params.scaleYP * params.sizeXP;
       const scaleY = params.scaleYP;
-      let spritesP = [];
+      spritesP = [];
       for (let i = 0; i < numberP; i++) {
         const angleOffset = (i - (numberP - 1) / 2) * (spaceP * Math.PI / 180);
         const angle = baseAngle + angleOffset;
@@ -910,7 +912,7 @@
       baseAngle = Direction + Angle;
     }
   
-    const sprites = [];
+    sprites = [];
     for (let i = 0; i < number; i++) {
       const angleOffset = (i - (number - 1) / 2) * (space * Math.PI / 180);
       const angle = baseAngle + angleOffset;
