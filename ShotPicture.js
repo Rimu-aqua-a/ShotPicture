@@ -4,6 +4,272 @@
 
 /*:
  * @target MZ
+ * @plugindesc Fires a picture as a bullet.
+ * @author Rimu
+ *
+ * @help 
+ *
+ * ■How to use
+ * You can fire a bullet from an event by using the plugin command "Fire bullet".
+ * Please set each parameter before use.
+ * 
+ * 
+ * @param PlayerBullet
+ * @text Whether the player fires bullets
+ * @desc Allows players to fire bullets.
+ * @type boolean
+ * @default false
+ * 
+ * @param PlayerBulletKey
+ * @text key to fire
+ * @desc Set any key. (default is S)
+ * @default S
+ * 
+ * @param ImageP
+ * @text image
+ * @type file
+ * @require 1
+ * @dir img
+ * @desc This is an image file to be displayed as a bullet.
+ * 
+ * @param SoundP
+ * @text Sound effect
+ * @type file
+ * @dir audio/se
+ * @desc This is the sound effect when fired.
+ * 
+ * @param BulletNumberP
+ * @text number of bullets
+ * @desc This is the number of bullets fired at once.
+ * @default 1
+ * 
+ * @param BulletSpaceP
+ * @text bullet spacing
+ * @default 1
+ * @desc This is the interval when multiple bullets are fired.
+ * 
+ * @param BulletSpeedP
+ * @text bullet speed
+ * @default 5
+ * @desc This is the speed of the bullet being fired.
+ * 
+ * @param BulletSizeYP
+ * @text bullet size
+ * @default 10
+ * @desc This is the size of the bullet fired.
+ * 
+ * @param BulletSizeXP
+ * @text width of bullet
+ * @desc This is the width of the bullet being fired. 1 makes it a square.
+ * @default 1
+ * 
+ * @param EasingP
+ * @text Speed ​​easing
+ * @desc Adjust the speed.
+ * @type select
+ * @option no change
+ * @value linear
+ * @option It's getting faster
+ * @value easeIn
+ * @option It's getting late
+ * @value easeOut
+ * @default linear
+ * 
+ * 
+ * @param blendModeP
+ * @text How to blendMode bullets
+ * @type select
+ * @option usually
+ * @value 0
+ * @option addition
+ * @value 1
+ * @option multiplication
+ * @value 2
+ * @option screen
+ * @value 3
+ * @default 0
+ * 
+ * @param TargetP
+ * @text Target of bullet
+ * @desc It is the target to be hit. Enter -1 for player and ID for event. (Multiple possible "1,2,3", "1~3" etc.)
+ * @default -1
+ *
+ * @param TransparencyCheckP
+ * @text Whether to determine where there is no opacity
+ * @type boolean
+ * @desc Select whether to use areas without opacity in the picture as hit detection.
+ * @default false
+ * 
+ * @param DeleteWallP
+ * @text Walls that disappear when hit
+ * @desc Please enter the terrain tag and region ID. If it hits there, the bullet will disappear.
+ * @default 1
+ * 
+ * @param HitBulletP
+ * @text Processing when hit
+ * @type struct<HitEventP>
+ * @desc What to do when hit by a bullet
+ *
+ * 
+ * 
+ * @command AddBullet
+ * @text fire a bullet
+ * @desc The picture will be fired as a bullet from the event that called this.
+ *
+ * @arg Image
+ * @text image
+ * @type file
+ * @require 1
+ * @dir img
+ * @desc This is an image file to be displayed as a bullet.
+ * 
+ * @arg Sound
+ * @text Sound effect
+ * @type file
+ * @dir audio/se
+ * @desc This is the sound effect when fired.
+ * 
+ * @arg BulletNumber
+ * @text number of bullets
+ * @desc This is the number of bullets fired at once.
+ * @default 1
+ * 
+ * @arg BulletSpace
+ * @text bullet spacing
+ * @default 1
+ * @desc This is the interval when multiple bullets are fired.
+ * 
+ * @arg BulletSpeed
+ * @text bullet speed
+ * @default 5
+ * @desc This is the speed of the bullet being fired.
+ * 
+ * @arg BulletSizeY
+ * @text bullet size
+ * @default 10
+ * @desc This is the size of the bullet fired.
+ * 
+ * @arg BulletSizeX
+ * @text width of bullet
+ * @desc This is the width of the bullet being fired. 1 makes it a square.
+ * @default 1
+ * 
+ * @arg Easing
+ * @text Speed ​​easing
+ * @desc Adjust the speed.
+ * @type select
+ * @option no change
+ * @value linear
+ * @option It's getting faster
+ * @value easeIn
+ * @option It's getting late
+ * @value easeOut
+ * @default linear
+ * 
+ * 
+ * @arg blendMode
+ * @text How to blendMode bullets
+ * @type select
+ * @option usually
+ * @value 0
+ * @option addition
+ * @value 1
+ * @option multiplication
+ * @value 2
+ * @option screen
+ * @value 3
+ * @default 0
+ * 
+ * @arg Target
+ * @text Target of bullet
+ * @desc It is the target to be hit. Enter -1 for player and ID for event. (Multiple possible "1,2,3", "1~3" etc.)
+ * @default -1
+ *
+ * @arg TransparencyCheck
+ * @text Whether to determine where there is no opacity
+ * @type boolean
+ * @desc Select whether to use areas without opacity in the picture as hit detection.
+ * @default false
+ * 
+ * @arg DeleteWall
+ * @text Walls that disappear when hit
+ * @desc Please enter the terrain tag and region ID. If it hits there, the bullet will disappear.
+ * @default 1
+ * 
+ * @arg HitBullet
+ * @text Processing when hit
+ * @type struct<HitEventP>
+ * @desc What to do when hit by a bullet
+ * 
+ * 
+ * 
+ * @command NotBulletHit
+ * @text bullet passing through
+ * @desc Bullets will now pass through you.
+ * 
+ * @command NotnotBulletHit
+ * @text Cancel slipping through
+ * @desc Eliminates bullet slippage.
+ *
+ * 
+ */
+
+/*~struct~HitEventP:
+* @param DeleteBulletP
+* @text Delete bullets
+* @type boolean
+* @desc Delete the bullet when it hits.
+* @default true
+* 
+* @param HitTargetP
+* @text Target storage variable
+* @type variable
+* @desc This is a variable that stores the opponent hit by the bullet.
+* @default 0
+* 
+* @param HitCommonP
+* @text common event
+* @type common_event
+* @desc This is a common event that is triggered when a bullet hits.
+* @default 0
+*
+* @param HitSwitchP
+* @text Switch
+* @type switch
+* @desc This is a switch that turns on when a bullet hits.
+* @default 0
+*/
+
+/*~struct~HitEvent:
+* @param DeleteBullet
+* @text Delete bullets
+* @type boolean
+* @desc Delete the bullet when it hits.
+* @default true
+* 
+* @param HitTarget
+* @text Target storage variable
+* @type variable
+* @desc This is a variable that stores the opponent hit by the bullet.
+* @default 0
+* 
+* @param HitCommon
+* @text common event
+* @type common_event
+* @desc This is a common event that is triggered when a bullet hits.
+* @default 0
+*
+* @param HitSwitch
+* @text Switch
+* @type switch
+* @desc This is a switch that turns on when a bullet hits.
+* @default 0
+* 
+* 
+*/
+
+/*:ja
+ * @target MZ
  * @plugindesc ピクチャを弾として発射します。
  * @author Rimu
  *
