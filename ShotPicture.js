@@ -100,6 +100,11 @@
  * @desc ピクチャの不透明度が無い場所も当たり判定として使用するかを選択します。
  * @default false
  * 
+ * @param DeleteWallP
+ * @text 当たると消える壁等
+ * @desc 地形タグやリージョンIDを入れてください。そこに当たると弾が消滅します。
+ * @default 1
+ * 
  * @param HitBulletP
  * @text 当たった時の処理
  * @type struct<HitEventP>
@@ -197,6 +202,11 @@
  * @desc ピクチャの不透明度が無い場所も当たり判定として使用するかを選択します。
  * @default false
  * 
+ * @arg DeleteWall
+ * @text 当たると消える壁等
+ * @desc 地形タグやリージョンIDを入れてください。そこに当たると弾が消滅します。
+ * @default 1
+ * 
  * @arg HitBullet
  * @text 当たった時の処理
  * @type struct<HitEvent>
@@ -222,6 +232,12 @@
 * @desc 弾が当たった時に弾を削除します。
 * @default true
 * 
+* @param HitTargetP
+* @text 対象格納変数
+* @type variable
+* @desc 弾が当たった相手を格納する変数です。
+* @default 0
+* 
 * @param HitCommonP
 * @text コモンイベント
 * @type common_event
@@ -241,6 +257,12 @@
 * @type boolean
 * @desc 弾が当たった時に弾を削除します。
 * @default true
+* 
+* @param HitTarget
+* @text 対象格納変数
+* @type variable
+* @desc 弾が当たった相手を格納する変数です。
+* @default 0
 * 
 * @param HitCommon
 * @text コモンイベント
@@ -484,12 +506,23 @@
   const PlayerBullet = params.PlayerBullet;
 
   if (PlayerBullet == "true") {
-    params.nameP = setDefault(param.ImageP, "");
-    params.numberP = Number(setDefault(param.BulletNumberP, 1));
-    params.spaceP = Number(setDefault(param.BulletSpaceP, 1));
-    params.speedP = Number(setDefault(param.BulletSpeedP, 10));
-    params.scaleYP = Number(setDefault(param.BulletSizeYP, 10));
-    params.sizeXP = Number(setDefault(param.BulletSizeXP, 1));
+    const params = {
+      nameP: setDefault(param.ImageP, ""),
+      numberP: Number(setDefault(param.BulletNumberP, 1)),
+      spaceP: Number(setDefault(param.BulletSpaceP, 1)),
+      speedP: Number(setDefault(param.BulletSpeedP, 10)),
+      scaleYP: Number(setDefault(param.BulletSizeYP, 10)),
+      sizeXP: Number(setDefault(param.BulletSizeXP, 1)),
+      transparencyCheckP: setDefault(param.TransparencyCheckP, false),
+      blendModeP: Number(setDefault(param.blendModeP, 0)),
+      DeleteWallP: Number(setDefault(param.DeleteWallP, 1)),
+      DeleteBulletP: toBoolean(JSON.parse(param.HitBulletP).DeleteBulletP, true),
+      HitCommonP: toNumber(JSON.parse(param.HitBulletP).HitCommonP, 0),
+      HitTargetP: toNumber(JSON.parse(param.HitBulletP).HitTargetP, 0),
+      HitSwitchP: toNumber(JSON.parse(param.HitBulletP).HitSwitchP, 0),
+      easingTypeP: setDefault(param.EasingTypeP, "linear"),
+    };
+
     params.targetP = param.TargetP ? param.TargetP.split(',').map(str => {
       if (str.includes('~')) {
         const range = str.split('~').map(Number);
@@ -499,12 +532,7 @@
         return Number(str);
       }
     }).flat() : [];
-    params.transparencyCheckP = setDefault(param.TransparencyCheckP, false);
-    params.blendModeP = Number(setDefault(param.blendModeP, 0));
-    params.DeleteBulletP = toBoolean(param.HitBulletP.DeleteBulletP, true);
-    params.HitCommonP = toNumber(param.HitBulletP.HitCommonP, 0);
-    params.HitSwitchP = toNumber(param.HitBulletP.HitSwitchP, 0);
-    params.easingTypeP = setDefault(param.EasingTypeP, "linear");
+
     const speedP = params.speedP;
     const nameP = params.nameP;
     const blendModeP = params.blendModeP;
@@ -516,7 +544,7 @@
     let hitcommonP = params.HitCommonP;
     let hitswitchP = params.HitSwitchP;
 
-    if (nothit == true) {
+    if (nothit == "true") {
 
       transparencyCheckP = true;
       deletebulletP = false;
@@ -529,7 +557,7 @@
       hitcommonP = params.HitCommonP;
       hitswitchP = params.HitSwitchP;
     };
-
+    
     setKey(shot);
 
     Scene_Map.prototype.updatekey = function () {
@@ -623,7 +651,7 @@
     
       const easingFunctionP = easingFunctionsP[params.easingTypeP] || easingFunctionsP.linear;
 
-      const distance = 0.8; // プレイヤーからの距離
+      const distance = 0.5; // プレイヤーからの距離
       const offsetX = distance * Math.cos(baseAngle);
       const offsetY = distance * Math.sin(baseAngle);
 
@@ -660,6 +688,8 @@
         SceneManager._scene.addChild(sprite);
       }
 
+      let hasCollisionOccurred = false;
+
       function updateShotPictureP() {
         spritesP.forEach((sprite) => {
           if (!sprite) return;
@@ -674,13 +704,13 @@
           sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
       
           const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
-          const mapY = Math.round(((sprite.y + 48 - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
-          if ($gameMap.regionId(mapX, mapY) == 2) {
+          const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
+          if ($gameMap.regionId(mapX, mapY) == params.DeleteWallP) {
             SceneManager._scene.removeChild(sprite);
             spritesP.splice(spritesP.indexOf(sprite), 1);
             return;
           }
-      
+          
           const player = $gamePlayer;
           const playerSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
           if (!playerSprite) {
@@ -697,8 +727,11 @@
                     SceneManager._scene.removeChild(sprite);
                     spritesP.splice(spritesP.indexOf(sprite), 1);
                   }
+                  if (hasCollisionOccurred) return;
+                  $gameVariables.setValue(params.HitTargetP,event.eventId())
                   $gameTemp.reserveCommonEvent(hitcommonP);
                   $gameSwitches.setValue(hitswitchP, true);
+                  hasCollisionOccurred = true;
                   return;
                 }
               }
@@ -713,8 +746,11 @@
                     SceneManager._scene.removeChild(sprite);
                     spritesP.splice(spritesP.indexOf(sprite), 1);
                   }
+                  if (hasCollisionOccurred) return;
+                  $gameVariables.setValue(params.HitTargetP,event.eventId())
                   $gameTemp.reserveCommonEvent(hitcommonP);
                   $gameSwitches.setValue(hitswitchP, true);
+                  hasCollisionOccurred = true;
                   return;
                 }
               }
@@ -752,7 +788,9 @@
       PlayerTarget: setDefault(args.PlayerTarget, true),
       Angle: setDefault(args.Angle, 0),
       easingType: setDefault(args.EasingType, "linear"),
+      DeleteWall: Number(setDefault(args.DeleteWall, 1)),
       deletebullet: toBoolean(JSON.parse(args.HitBullet).DeleteBullet, true),
+      HitTarget: toNumber(JSON.parse(args.HitBullet).HitTarget, 0),
       hitcommon: toNumber(JSON.parse(args.HitBullet).HitCommon, 0),
       hitswitch: toNumber(JSON.parse(args.HitBullet).HitSwitch, 0)
     };
@@ -806,10 +844,24 @@
     } else {
       Angle = Number(Angle);
     }
-    const deletebullet = params.deletebullet;
-    const hitcommon = params.hitcommon;
-    const hitswitch = params.hitswitch;
-    const transparencyCheck = params.transparencyCheck;
+    let deletebullet = params.deletebullet;
+    let hitcommon = params.hitcommon;
+    let hitswitch = params.hitswitch;
+    let transparencyCheck = params.transparencyCheck;
+
+    if (nothit == "true") {
+
+      transparencyCheck = true;
+      deletebullet = false;
+      hitcommon = 0;
+      hitswitch = 0;
+
+    } else {
+      transparencyCheck = params.transparencyCheck;
+      deletebullet = params.deletebullet;
+      hitcommon = params.hitcommon;
+      hitswitch = params.hitswitch;
+    };
   
     let Direction = 0;
     let TargetX = 0;
@@ -886,6 +938,8 @@
       SceneManager._scene.addChild(sprite);
     }
   
+    let hasCollisionOccurred = false;
+
     function updateShotPicture() {
       sprites.forEach((sprite) => {
         if (!sprite) return;
@@ -902,12 +956,12 @@
   
         const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
         const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
-        if ($gameMap.regionId(mapX, mapY) == 2) {
+        if ($gameMap.regionId(mapX, mapY) == params.DeleteWall) {
           SceneManager._scene.removeChild(sprite);
           sprites.splice(sprites.indexOf(sprite), 1);
           return;
         }
-  
+
         const playerSprite = getPlayerSprite();
         if (!playerSprite) return;
   
@@ -928,8 +982,11 @@
               SceneManager._scene.removeChild(sprite);
               sprites.splice(sprites.indexOf(sprite), 1);
             } // スプライトを配列から削除
+            if (hasCollisionOccurred) return;
+            $gameVariables.setValue(params.HitTarget,event.eventId())
             $gameTemp.reserveCommonEvent(hitcommon);
             $gameSwitches.setValue(hitswitch, true);
+            hasCollisionOccurred = true;
             return; // ここで処理を終了して次のスプライトの処理に進む
           }
         } else {
@@ -948,8 +1005,11 @@
               sprites.splice(sprites.indexOf(sprite), 1);
             }
             // スプライトを配列から削除
+            if (hasCollisionOccurred) return;
+            $gameVariables.setValue(params.HitTarget,event.eventId())
             $gameTemp.reserveCommonEvent(hitcommon);
             $gameSwitches.setValue(hitswitch, true);
+            hasCollisionOccurred = true;
             return; // ここで処理を終了して次のスプライトの処理に進む
           }
         }
