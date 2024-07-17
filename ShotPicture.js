@@ -1080,6 +1080,7 @@
       const newSprites = [];
       for (let i = 0; i < numberP; i++) {
         const angleOffset = (i - (numberP - 1) / 2) * (spaceP * Math.PI / 180);
+        const rotation = 90 * (spaceP * Math.PI / 180);
         const angle = baseAngle + angleOffset;
 
         const sprite = new Sprite(ImageManager.loadBitmap('img/', nameP));
@@ -1092,7 +1093,7 @@
         sprite.anchor.x = 0.5;
         sprite.anchor.y = 0.5;
         sprite.blendMode = blendModeP;
-        sprite.rotation = angle; // 弾の角度を設定
+        sprite.rotation = angle + rotation; // 弾の角度を設定
 
         sprite._moveX = speedP * Math.cos(angle);
         sprite._moveY = speedP * Math.sin(angle);
