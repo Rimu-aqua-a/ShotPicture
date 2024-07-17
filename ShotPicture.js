@@ -1034,6 +1034,8 @@
         AudioManager.playSe({ "name": params.se, "volume": 50, "pitch": 100, "pan": 0 });
       }
 
+      hasCollisionOccurred = false;
+
       const player = $gamePlayer;
       const playerSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
       if (!playerSprite) {
