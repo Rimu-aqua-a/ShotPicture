@@ -693,7 +693,7 @@
     const cos = Math.cos(-sprite.rotation);
     const bx = Math.floor(dx * cos + dy * -sin) / sprite.scale.x + (sprite.anchor.x * sprite.width);
     const by = Math.floor(dx * sin + dy * cos) / sprite.scale.y + (sprite.anchor.y * sprite.height);
-  
+    
     // 画像の使用インデックスに基づくビットマップの選択
     const character = sprite._character;
     if (!character) {
@@ -703,30 +703,29 @@
     const index = character.characterIndex();
     const sheetWidth = sprite.bitmap.width;
     const sheetHeight = sprite.bitmap.height;
-    const fileName = getSpriteFileName(sprite);
+    const fileName = decodeURIComponent(getSpriteFileName(sprite));
     if (!fileName) {
       return false;
     }
     const frame = FlameGet(fileName);
-
-    const frameWidth = sheetWidth / (frame * 4); // 4列 * frameフレーム
-    const frameHeight = sheetHeight / 8; // 2行 * 4方向
+    let frameWidth = sheetWidth / (frame * 4);
+    let frameHeight = sheetHeight / 8;
+    if (fileName.includes('$')) {
+    frameWidth = sheetWidth / frame;
+    frameHeight = sheetHeight / 4;
+    }
   
-    // インデックスに基づくビットマップの部分の計算
     const characterDirection = character.direction();
     const characterPattern = character.pattern();
-    const offsetX = (index % 4) * 3 * frameWidth + characterPattern * frameWidth;
-    const offsetY = (Math.floor(index / 4) * 4 + (characterDirection / 2 - 1)) * frameHeight;
+    const offsetX = (index % 4) * frame * frameWidth + characterPattern * frameWidth;
+    const offsetY = (Math.floor(index / 2) * 2 + (characterDirection / 2 - 1)) * frameHeight;
     const targetX = bx + offsetX;
     const targetY = by + offsetY;
-  
     // 透明度の取得
     if (targetX < 0 || targetX >= sheetWidth || targetY < 0 || targetY >= sheetHeight) {
       return false;
     }
-  
     const alpha = sprite.bitmap.getAlphaPixel(targetX, targetY);
-
     return alpha !== 0;
   }
   
@@ -767,7 +766,6 @@
     const endX = Math.min(TargetMaxX, bulletMaxX);
     const startY = Math.max(TargetMinY, bulletMinY);
     const endY = Math.min(TargetMaxY, bulletMaxY);
-
     for (let x = startX; x <= endX; x++) {
       for (let y = startY; y <= endY; y++) {
         if (getBulletAlphaPixel(bulletSprite, x - bulletSprite.x, y - bulletSprite.y) &&
