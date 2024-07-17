@@ -634,28 +634,103 @@
     return alpha !== 0;
   }
 
-  function getTargetAlphaPixel(sprite, localX, localY) {
-    const pic = sprite;
-    if (!pic.bitmap.isReady() || pic.scale.x === 0 || pic.scale.y === 0) {
-      return false;
-    }
-    if (pic.scale.x < 0.01 || pic.scale.y < 0.01) {
-      return false;
-    }
 
+  function getSpriteFileName(sprite) {
+    if (sprite && sprite.bitmap && sprite.bitmap._url) {
+      const url = sprite.bitmap._url;
+      const fileName = url.substring(url.lastIndexOf('/') + 1);
+      return fileName;
+    }
+    return null;
+  }
+  
+
+  function FlameGet(fileName){
+    const pluginFilePath = "GALV_CharacterFramesMZ";
+    if (pluginFilePath) {
+  const parameters = PluginManager.parameters(pluginFilePath);
+  const fileSymbol = parameters["fileSymbol"];
+
+  let frame = 3; // デフォルトのフレーム数
+  let pattern = fileSymbol+"\\d+";
+  if (fileName.indexOf(fileSymbol) !== -1) {
+  const fileName2 = fileName.replace(new RegExp(pattern), fileSymbol);
+  let pattern2 = /%\((\d+)\)/;
+  let match2 = fileName2.match(pattern2);
+  if (match2) {
+    frame = match2[1];
+    return frame;
+} else {
+  return frame;
+}
+}else{
+  return frame;
+}
+}else{
+  let frame = 3
+  return frame;
+}
+
+}
+
+
+
+  function getTargetAlphaPixel(sprite, localX, localY) {
+    if (!sprite || !sprite.bitmap || !sprite.bitmap.isReady() || sprite.scale.x === 0 || sprite.scale.y === 0) {
+      return false;
+    }
+  
+    if (sprite.scale.x < 0.01 || sprite.scale.y < 0.01) {
+      return false;
+    }
+  
     // 座標の計算
     const dx = localX;
     const dy = localY;
-
+  
     // スプライトの回転角度と中心点の補正
-    const sin = Math.sin(-pic.rotation);
-    const cos = Math.cos(-pic.rotation);
-    const bx = Math.floor(dx * cos + dy * -sin) / pic.scale.x + (pic.anchor.x * pic.width);
-    const by = Math.floor(dx * sin + dy * cos) / pic.scale.y + (pic.anchor.y * pic.height);
+    const sin = Math.sin(-sprite.rotation);
+    const cos = Math.cos(-sprite.rotation);
+    const bx = Math.floor(dx * cos + dy * -sin) / sprite.scale.x + (sprite.anchor.x * sprite.width);
+    const by = Math.floor(dx * sin + dy * cos) / sprite.scale.y + (sprite.anchor.y * sprite.height);
+  
+    // 画像の使用インデックスに基づくビットマップの選択
+    const character = sprite._character;
+    if (!character) {
+      return false;
+    }
+  
+    const index = character.characterIndex();
+    const sheetWidth = sprite.bitmap.width;
+    const sheetHeight = sprite.bitmap.height;
+    const fileName = getSpriteFileName(sprite);
+    if (!fileName) {
+      return false;
+    }
+    const frame = FlameGet(fileName);
+
+    const frameWidth = sheetWidth / (frame * 4); // 4列 * frameフレーム
+    const frameHeight = sheetHeight / 8; // 2行 * 4方向
+  
+    // インデックスに基づくビットマップの部分の計算
+    const characterDirection = character.direction();
+    const characterPattern = character.pattern();
+    const offsetX = (index % 4) * 3 * frameWidth + characterPattern * frameWidth;
+    const offsetY = (Math.floor(index / 4) * 4 + (characterDirection / 2 - 1)) * frameHeight;
+    const targetX = bx + offsetX;
+    const targetY = by + offsetY;
+  
     // 透明度の取得
-    const alpha = pic.bitmap.getAlphaPixel(bx, by);
+    if (targetX < 0 || targetX >= sheetWidth || targetY < 0 || targetY >= sheetHeight) {
+      return false;
+    }
+  
+    const alpha = sprite.bitmap.getAlphaPixel(targetX, targetY);
+
     return alpha !== 0;
   }
+  
+  
 
   function checkCollision(TargetSprite, bulletSprite) {
     // プレイヤーと弾のポリゴン頂点を取得
