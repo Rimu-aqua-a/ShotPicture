@@ -9,9 +9,28 @@
  * @help 
  *
  * ■How to use
- * You can fire a bullet from an event by using the plugin command "Fire bullet".
+ * You can fire a bullet from an event by 
+ * using the plugin command "Fire bullet".
  * Please set each parameter before use.
  * 
+ * ■Update history
+ * 8/09 ver1.3・Implemented a function that allows to restrict 
+ * 　　　　　　　own aircraft's bullet firing with a switch.
+ * 　　　　　　・Implemented a function that allows to restrict
+ * 　　　　　　　the bullet firing of own aircraft while displaying text.
+ * 7/17 ver1.2・Modified to correspond to image index.
+ * 　　　　　　・Corrected so that the collision detection of 
+ * 　　　　　　　transparency can be judged correctly.
+ * 7/16 ver1.1・Implemented a function that can store the 
+ * 　　　　　　　ID of the hit target in a variable.
+ * 　　　　　　・Implemented a function that allows bullets 
+ * 　　　　　　　to disappear by setting region/terrain tags.
+ * 　　　　　　・Corrected so that even if multiple bullets hit, 
+ * 　　　　　　　the hit processing will be done once.
+ * 　　　　　　・Fixed bug.
+ * 7/15 ver1.00 public
+ * 
+ * ※I'm using Google Translate.
  * 
  * @param PlayerBullet
  * @text Whether the player fires bullets
@@ -23,6 +42,19 @@
  * @text key to fire
  * @desc Set any key. (default is S)
  * @default S
+ * 
+ * @param PBulletSwitch
+ * @text fire limit switch
+ * @desc Turn on the specified switch
+ * Limit the firing of bullets (unlimited without)
+ * @type switch
+ * @default 0
+ * 
+ * @param Messagelimit
+ * @text Restrictions while displaying messages
+ * @desc Limits the firing of bullets while a message is displayed.
+ * @type boolean
+ * @default true
  * 
  * @param ImageP
  * @text image
@@ -63,7 +95,7 @@
  * @default 1
  * 
  * @param EasingP
- * @text Speed ​​easing
+ * @text Speed easing
  * @desc Adjust the speed.
  * @type select
  * @option no change
@@ -154,7 +186,7 @@
  * @default 1
  * 
  * @arg Easing
- * @text Speed ​​easing
+ * @text Speed easing
  * @desc Adjust the speed.
  * @type select
  * @option no change
@@ -267,7 +299,7 @@
 * 
 */
 
-/*:
+/*:ja
  * @target MZ
  * @plugindesc ピクチャを弾として発射します。
  * @author Rimu
@@ -277,6 +309,17 @@
  * ■使用方法
  * プラグインコマンド「弾の発射」を使うことでイベントから弾を発射できます。
  * 各パラメーターを設定の上ご使用ください。
+ * 
+ * ■更新履歴
+ * 8/09 ver1.3・スイッチで自機の弾発射を制限できる機能を実装
+ * 　　　　　　・文章表示中の自機の弾発射を制限できる機能を実装
+ * 7/17 ver1.2・画像のインデックスに対応するように修正
+ * 　　　　　　・透明度の当たり判定を正常に判定できるように修正
+ * 7/16 ver1.1・被弾した対象のIDを変数に格納できる機能を実装
+ * 　　　　　　・リージョン・地形タグ設定で弾が消える機能を実装
+ * 　　　　　　・複数の弾が当たっても被弾処理を一回になるよう修正
+ * 　　　　　　・バグを修正
+ * 7/15 ver1.00公開
  * 
  * 
  * @param PlayerBullet
@@ -289,6 +332,19 @@
  * @text 発射するキー
  * @desc 任意のキーを設定できます。(デフォルトはS)
  * @default S
+ * 
+ * @param PBulletSwitch
+ * @text 発射制限スイッチ
+ * @desc 指定したスイッチをオンにすると
+ * 弾の発射を制限します(なしで無制限)
+ * @type switch
+ * @default 0
+ * 
+ * @param Messagelimit
+ * @text メッセージ表示中制限
+ * @desc メッセージ表示中の間弾の発射を制限します。
+ * @type boolean
+ * @default true
  * 
  * @param ImageP
  * @text 画像
@@ -849,6 +905,8 @@
     const params = {
       nameP: setDefault(param.ImageP, ""),
       numberP: Number(setDefault(param.BulletNumberP, 1)),
+      PBulletSwitch: Number(setDefault(param.PBulletSwitch, 0)),
+      Messagelimit: setDefault(param.Messagelimit,""),
       spaceP: Number(setDefault(param.BulletSpaceP, 1)),
       speedP: Number(setDefault(param.BulletSpeedP, 10)),
       scaleYP: Number(setDefault(param.BulletSizeYP, 10)),
@@ -873,6 +931,8 @@
       }
     }).flat() : [];
 
+    const Messagelimit = params.Messagelimit;
+    const PBulletSwitch = params.PBulletSwitch;
     const speedP = params.speedP;
     const nameP = params.nameP;
     const blendModeP = params.blendModeP;
@@ -901,6 +961,13 @@
     setKey(shot);
 
     Scene_Map.prototype.updatekey = function () {
+      if (Messagelimit == true){
+        if ($gameMessage && $gameMessage.isBusy()) {
+        return;}}
+      if (!PBulletSwitch == 0 || !PBulletSwitch == ""){
+        if ($gameSwitches && $gameSwitches.value(PBulletSwitch)){
+        return;}}
+      
       if (Input.isTriggered("Shot")) {
         Scene_Map.prototype.playerShot()
       }
