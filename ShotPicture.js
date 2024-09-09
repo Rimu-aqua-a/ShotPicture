@@ -15,6 +15,7 @@
  * 
  * ■Update history
  * 9/09 ver1.4・Implemented a function to fix the angle of your own bullet.
+ * 　　　　　　・Implemented bullet addition function for own aircraft
  * 　　　　　　・Fixed bug.
  * 8/09 ver1.3・Implemented a function that allows to restrict 
  * 　　　　　　　own aircraft's bullet firing with a switch.
@@ -343,6 +344,7 @@
  * 
  * ■更新履歴
  * 9/09 ver1.4・自機の弾の角度固定機能を実装
+ * 　　　　　　・自機の弾増減機能を実装
  * 　　　　　　・バグを修正
  * 8/09 ver1.3・スイッチで自機の弾発射を制限できる機能を実装
  * 　　　　　　・文章表示中の自機の弾発射を制限できる機能を実装
@@ -492,6 +494,16 @@
  * @type struct<HitEventP>
  * @desc 弾が当たった際の処理
  *
+ * 
+ * @command BulletNumberPlus
+ * @text 自機の弾数変更
+ * @desc 自機の撃つ弾の数を変更します
+ * 
+ * @arg BulletNumberP2
+ * @text 追加数
+ * @desc 追加(-で減少)する弾の数です。
+ * @Min -999
+ * @default 1
  * 
  * 
  * @command AddBullet
@@ -929,8 +941,6 @@
     nothit = true;
   });
 
-
-
   params.PlayerBulletKey = setDefault(param.PlayerBulletKey, "S");
   const PlayerBulletKey = params.PlayerBulletKey;
   const shot = PlayerBulletKey.toUpperCase();
@@ -1002,12 +1012,19 @@
     const nameP = params.nameP;
     const blendModeP = params.blendModeP;
     const spaceP = params.spaceP;
-    const numberP = params.numberP;
+    let numberP = params.numberP;
     const targetP = params.targetP;
     let transparencyCheckP = params.transparencyCheckP;
     let deletebulletP = params.DeleteBulletP;
     let hitcommonP = params.HitCommonP;
     let hitswitchP = params.HitSwitchP;
+
+    let numberPplus = 0;
+    PluginManager.registerCommand(pluginName, "BulletNumberPlus", function (args) {
+      params.numberPplus =Number(setDefault(args.BulletNumberP2, 1));
+      numberPplus= params.numberPplus;
+      numberP += numberPplus;
+      console.log(numberP)});
 
     if (nothit == "true") {
 
@@ -1261,7 +1278,7 @@
       updateShotPictureP();
     }
   }
-  
+
 
   PluginManager.registerCommand(pluginName, "AddBullet", function (args) {
     const params = {
@@ -1517,8 +1534,11 @@
                   }
               }
       });
-  }
   
+  
+    }
+  
+
 
     const _Scene_Map_updateMain = Scene_Map.prototype.updateMain;
     Scene_Map.prototype.updateMain = function () {
