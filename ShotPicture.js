@@ -14,6 +14,8 @@
  * Please set each parameter before use.
  * 
  * ■Update history
+ * 9/09 ver1.4・Implemented a function to fix the angle of your own bullet.
+ * 　　　　　　・Fixed bug.
  * 8/09 ver1.3・Implemented a function that allows to restrict 
  * 　　　　　　　own aircraft's bullet firing with a switch.
  * 　　　　　　・Implemented a function that allows to restrict
@@ -55,6 +57,35 @@
  * @desc Limits the firing of bullets while a message is displayed.
  * @type boolean
  * @default true
+ * 
+ * @param AnglefixedP
+ * @text fixed direction
+ * @desc Set whether to fix the bullet in the specified direction.
+ * @type boolean
+ * @default false
+ * 
+ * @param AngleP
+ * @text Specified direction
+ * @desc Set the direction when fixing the direction.
+ * @type select
+ * @option under
+ * @value 2
+ * @option top
+ * @value 8
+ * @option right
+ * @value 4
+ * @option left
+ * @value 6
+ * @option lower right
+ * @value 3
+ * @option lower left
+ * @value 1
+ * @option upper right
+ * @value 9
+ * @option upper left
+ * @value 7
+ * @default linear
+ * 
  * 
  * @param ImageP
  * @text image
@@ -311,6 +342,8 @@
  * 各パラメーターを設定の上ご使用ください。
  * 
  * ■更新履歴
+ * 9/09 ver1.4・自機の弾の角度固定機能を実装
+ * 　　　　　　・バグを修正
  * 8/09 ver1.3・スイッチで自機の弾発射を制限できる機能を実装
  * 　　　　　　・文章表示中の自機の弾発射を制限できる機能を実装
  * 7/17 ver1.2・画像のインデックスに対応するように修正
@@ -345,6 +378,34 @@
  * @desc メッセージ表示中の間弾の発射を制限します。
  * @type boolean
  * @default true
+ * 
+ * @param AnglefixedP
+ * @text 方向固定
+ * @desc 指定した方向に弾を固定するかどうかを設定します。
+ * @type boolean
+ * @default false
+ * 
+ * @param AngleP
+ * @text 指定方向
+ * @desc 方向を固定する場合の方向を設定します。
+ * @type select
+ * @option 下
+ * @value 2
+ * @option 上
+ * @value 8
+ * @option 右
+ * @value 4
+ * @option 左
+ * @value 6
+ * @option 右下
+ * @value 3
+ * @option 左下
+ * @value 1
+ * @option 右上
+ * @value 9
+ * @option 左上
+ * @value 7
+ * @default 8
  * 
  * @param ImageP
  * @text 画像
@@ -907,6 +968,8 @@
       numberP: Number(setDefault(param.BulletNumberP, 1)),
       PBulletSwitch: Number(setDefault(param.PBulletSwitch, 0)),
       Messagelimit: setDefault(param.Messagelimit,""),
+      AnglefixedP: toBoolean(setDefault(param.AnglefixedP, false)),
+      AngleP: Number(setDefault(param.AngleP, 8)),
       spaceP: Number(setDefault(param.BulletSpaceP, 1)),
       speedP: Number(setDefault(param.BulletSpeedP, 10)),
       scaleYP: Number(setDefault(param.BulletSizeYP, 10)),
@@ -933,6 +996,8 @@
 
     const Messagelimit = params.Messagelimit;
     const PBulletSwitch = params.PBulletSwitch;
+    const AnglefixedP = params.AnglefixedP;
+    const AngleP = params.AngleP;
     const speedP = params.speedP;
     const nameP = params.nameP;
     const blendModeP = params.blendModeP;
@@ -989,7 +1054,7 @@
 
   function updateShotPictureP() {
     spritesP.forEach((sprite) => {
-      if (!sprite) return;
+      if (!sprite || sprite._destroyed) return; // スプライトが存在しないか、削除されている場合は処理をスキップ
       sprite._elapsedTime += 1 / 60;
       const easedTime = sprite._easingFunction(sprite._elapsedTime);
       
@@ -1004,7 +1069,8 @@
       const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
       if ($gameMap.regionId(mapX, mapY) == params.DeleteWallP) {
         SceneManager._scene.removeChild(sprite);
-        spritesP.splice(spritesP.indexOf(sprite), 1);
+        sprite._destroyed = true; // 削除フラグを設定
+        spritesP.splice(index, 1);
         return;
       }
       
@@ -1022,7 +1088,8 @@
             if (nottransparency) {
               if (deletebulletP == true) {
                 SceneManager._scene.removeChild(sprite);
-                spritesP.splice(spritesP.indexOf(sprite), 1);
+                sprite._destroyed = true;
+                sprites.splice(index, 1);
               }
               if (hasCollisionOccurred) return;
               $gameVariables.setValue(params.HitTargetP,event.eventId())
@@ -1041,7 +1108,8 @@
             if (collisionPoints && collisionPoints.length > 0) {
               if (deletebulletP == true) {
                 SceneManager._scene.removeChild(sprite);
-                spritesP.splice(spritesP.indexOf(sprite), 1);
+                sprite._destroyed = true;
+                sprites.splice(index, 1);
               }
               if (hasCollisionOccurred) return;
               $gameVariables.setValue(params.HitTargetP,event.eventId())
@@ -1127,6 +1195,9 @@
       } else {
         baseAngle = lastbaseAngle;  // 止まっている間は直前の移動方向に基づいて角度を計算
       }
+      if(AnglefixedP==true){
+        baseAngle = directions[AngleP];
+      };
 
       const easingFunctionsP = {
         "linear": t => t,
@@ -1360,88 +1431,104 @@
     let hasCollisionOccurred = false;
 
     function updateShotPicture() {
-      sprites.forEach((sprite) => {
-        if (!sprite) return;
-  
-        sprite._elapsedTime += 1 / 60;
-  
-        const easedTime = sprite._easingFunction(sprite._elapsedTime);
-  
-        sprite._mapX += sprite._moveX * easedTime;
-        sprite._mapY += sprite._moveY * easedTime;
-  
-        sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
-        sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
-  
-        const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
-        const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
-        if ($gameMap.regionId(mapX, mapY) == params.DeleteWall) {
-          SceneManager._scene.removeChild(sprite);
-          sprites.splice(sprites.indexOf(sprite), 1);
-          return;
-        }
+      sprites.forEach((sprite, index) => {
+          if (!sprite || sprite._destroyed) return; // スプライトが存在しないか、削除されている場合は処理をスキップ
 
-        const playerSprite = getPlayerSprite();
-        if (!playerSprite) return;
+              // 経過時間を更新
+              sprite._elapsedTime += 1 / 60;
   
-        if (transparencyCheck === true) {
-          let nottransparency = checkCollision(playerSprite, sprite);
-          $gameMap.events().forEach(event => {
-            if (target !== -1) {
-              const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
-              if (!eventSprite) return;
-              if (eventSprite && target.includes(event.eventId())) {
-                nottransparency = checkCollision(eventSprite, sprite);
-              }
-            }
-          });
+              // イージング関数を適用
+              const easedTime = sprite._easingFunction(sprite._elapsedTime);
   
-          if (nottransparency) {
-            if (deletebullet === true) {
-              SceneManager._scene.removeChild(sprite);
-              sprites.splice(sprites.indexOf(sprite), 1);
-            } // スプライトを配列から削除
-            if (hasCollisionOccurred) return;
-            $gameVariables.setValue(params.HitTarget,event.eventId())
-            $gameTemp.reserveCommonEvent(hitcommon);
-            $gameSwitches.setValue(hitswitch, true);
-            hasCollisionOccurred = true;
-            return; // ここで処理を終了して次のスプライトの処理に進む
-          }
-        } else {
-          let collisionPoints = checkCollision(playerSprite, sprite);
-          $gameMap.events().forEach(event => {
-            const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
-            if (target !== -1) {
-              if (eventSprite && target.includes(event.eventId())) {
-                collisionPoints = checkCollision(eventSprite, sprite);
+              // マップ座標の更新
+              sprite._mapX += sprite._moveX * easedTime;
+              sprite._mapY += sprite._moveY * easedTime;
+  
+              // 画面上の座標を計算
+              sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
+              sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
+  
+              // マップの座標を取得
+              const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
+              const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
+  
+              // マップ領域の確認とスプライトの削除
+              if ($gameMap.regionId(mapX, mapY) == params.DeleteWall) {
+                  SceneManager._scene.removeChild(sprite);
+                  sprite._destroyed = true; // 削除フラグを設定
+                  sprites.splice(index, 1); // スプライトを配列から削除
+                  return; // 処理を終了して次のスプライトへ
               }
-            }
-          });
-          if (collisionPoints && collisionPoints.length > 0) {
-            if (deletebullet === true) {
-              SceneManager._scene.removeChild(sprite);
-              sprites.splice(sprites.indexOf(sprite), 1);
-            }
-            // スプライトを配列から削除
-            if (hasCollisionOccurred) return;
-            $gameVariables.setValue(params.HitTarget,event.eventId())
-            $gameTemp.reserveCommonEvent(hitcommon);
-            $gameSwitches.setValue(hitswitch, true);
-            hasCollisionOccurred = true;
-            return; // ここで処理を終了して次のスプライトの処理に進む
-          }
-        }
+  
+              const playerSprite = getPlayerSprite();
+              if (!playerSprite) return;
+  
+              // 透明チェック処理
+              if (transparencyCheck === true) {
+                  let nottransparency = checkCollision(playerSprite, sprite);
+  
+                  $gameMap.events().forEach(event => {
+                      if (target !== -1) {
+                          const eventSprite = SceneManager._scene._spriteset._characterSprites.find(eSprite => eSprite._character === event);
+                          if (!eventSprite) return;
+                          if (eventSprite && target.includes(event.eventId())) {
+                              nottransparency = checkCollision(eventSprite, sprite);
+                          }
+                      }
+                  });
+  
+                  if (nottransparency) {
+                      if (deletebullet === true) {
+                          SceneManager._scene.removeChild(sprite);
+                          sprite._destroyed = true; // 削除フラグを設定
+                          sprites.splice(index, 1); // スプライトを配列から削除
+                      }
+                      if (hasCollisionOccurred) return;
+                      $gameVariables.setValue(params.HitTarget, event.eventId());
+                      $gameTemp.reserveCommonEvent(hitcommon);
+                      $gameSwitches.setValue(hitswitch, true);
+                      hasCollisionOccurred = true;
+                      return; // 次のスプライトへ
+                  }
+              } else {
+                  let collisionPoints = checkCollision(playerSprite, sprite);
+  
+                  $gameMap.events().forEach(event => {
+                      const eventSprite = SceneManager._scene._spriteset._characterSprites.find(eSprite => eSprite._character === event);
+                      if (target !== -1) {
+                          if (eventSprite && target.includes(event.eventId())) {
+                              collisionPoints = checkCollision(eventSprite, sprite);
+                          }
+                      }
+                  });
+  
+                  if (collisionPoints && collisionPoints.length > 0) {
+                      if (deletebullet === true) {
+                          SceneManager._scene.removeChild(sprite);
+                          sprite._destroyed = true; // 削除フラグを設定
+                          sprites.splice(index, 1); // スプライトを配列から削除
+                      }
+                      if (hasCollisionOccurred) return;
+                      $gameVariables.setValue(params.HitTarget, event.eventId());
+                      $gameTemp.reserveCommonEvent(hitcommon);
+                      $gameSwitches.setValue(hitswitch, true);
+                      hasCollisionOccurred = true;
+                      return; // 次のスプライトへ
+                  }
+              }
       });
-    }
+  }
   
+
     const _Scene_Map_updateMain = Scene_Map.prototype.updateMain;
     Scene_Map.prototype.updateMain = function () {
       _Scene_Map_updateMain.call(this);
       Scene_Map.prototype.terminate = function () {
         _Scene_Map_terminate.call(this);
+        sprites.forEach((sprite) => {SceneManager._scene.removeChild(sprite);
+        sprites.splice(sprites.indexOf(sprite), 1);})
         spritesP = [];
-        sprites = []; // マップ移動時にスプライト配列をクリア
+        sprites = [];
       };
       updateShotPicture();
     };
