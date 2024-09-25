@@ -1176,8 +1176,8 @@
         let saveAmgle = saveAmgle1;
         saveAmgle1 = lastbaseAngle;
         lastbaseAngle = directions[playerDirection];  // 歩いている間は移動方向を更新
-        if (lastbaseAngle == undefined) { lastbaseAngle = saveAmgle; }
-      }
+        if (lastbaseAngle == undefined) { lastbaseAngle = saveAmgle;}
+      } 
     };
 
     Scene_Map.prototype.playerShot = function () {
@@ -1211,6 +1211,7 @@
         };
         const playerDirection = Input.dir8;
         baseAngle = directions[playerDirection];
+        if (baseAngle == undefined) { baseAngle = lastbaseAngle;}console.log(baseAngle)
       } else {
         baseAngle = lastbaseAngle;  // 止まっている間は直前の移動方向に基づいて角度を計算
       }
