@@ -1211,7 +1211,7 @@
         };
         const playerDirection = Input.dir8;
         baseAngle = directions[playerDirection];
-        if (baseAngle == undefined) { baseAngle = lastbaseAngle;}console.log(baseAngle)
+        if (baseAngle == undefined) { baseAngle = lastbaseAngle;}
       } else {
         baseAngle = lastbaseAngle;  // 止まっている間は直前の移動方向に基づいて角度を計算
       }
