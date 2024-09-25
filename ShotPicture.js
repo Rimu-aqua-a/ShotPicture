@@ -14,23 +14,24 @@
  * Please set each parameter before use.
  * 
  * ■Update history
- * 9/09 ver1.4・Implemented a function to fix the angle of your own bullet.
- * 　　　　　　・Implemented bullet addition function for own aircraft
- * 　　　　　　・Fixed bug.
- * 8/09 ver1.3・Implemented a function that allows to restrict 
- * 　　　　　　　own aircraft's bullet firing with a switch.
- * 　　　　　　・Implemented a function that allows to restrict
- * 　　　　　　　the bullet firing of own aircraft while displaying text.
- * 7/17 ver1.2・Modified to correspond to image index.
- * 　　　　　　・Corrected so that the collision detection of 
- * 　　　　　　　transparency can be judged correctly.
- * 7/16 ver1.1・Implemented a function that can store the 
- * 　　　　　　　ID of the hit target in a variable.
- * 　　　　　　・Implemented a function that allows bullets 
- * 　　　　　　　to disappear by setting region/terrain tags.
- * 　　　　　　・Corrected so that even if multiple bullets hit, 
- * 　　　　　　　the hit processing will be done once.
- * 　　　　　　・Fixed bug.
+ * 9/25 ver1.41・Fixed bug.
+ * 9/09 ver1.40・Implemented a function to fix the angle of your own bullet.
+ * 　　　　　　 ・Implemented bullet addition function for own aircraft
+ * 　　　　　　 ・Fixed bug.
+ * 8/09 ver1.30・Implemented a function that allows to restrict 
+ * 　　　　　　 　own aircraft's bullet firing with a switch.
+ * 　　　　　　 ・Implemented a function that allows to restrict
+ * 　　　　　　 　the bullet firing of own aircraft while displaying text.
+ * 7/17 ver1.20・Modified to correspond to image index.
+ * 　　　　　　 ・Corrected so that the collision detection of 
+ * 　　　　　　 　transparency can be judged correctly.
+ * 7/16 ver1.10・Implemented a function that can store the 
+ * 　　　　　　 　ID of the hit target in a variable.
+ * 　　　　　　 ・Implemented a function that allows bullets 
+ * 　　　　　　 　to disappear by setting region/terrain tags.
+ * 　　　　　　 ・Corrected so that even if multiple bullets hit, 
+ * 　　　　　　 　the hit processing will be done once.
+ * 　　　　　　 ・Fixed bug.
  * 7/15 ver1.00 public
  * 
  * ※I'm using Google Translate.
@@ -343,17 +344,18 @@
  * 各パラメーターを設定の上ご使用ください。
  * 
  * ■更新履歴
- * 9/09 ver1.4・自機の弾の角度固定機能を実装
- * 　　　　　　・自機の弾増減機能を実装
- * 　　　　　　・バグを修正
- * 8/09 ver1.3・スイッチで自機の弾発射を制限できる機能を実装
- * 　　　　　　・文章表示中の自機の弾発射を制限できる機能を実装
- * 7/17 ver1.2・画像のインデックスに対応するように修正
- * 　　　　　　・透明度の当たり判定を正常に判定できるように修正
- * 7/16 ver1.1・被弾した対象のIDを変数に格納できる機能を実装
- * 　　　　　　・リージョン・地形タグ設定で弾が消える機能を実装
- * 　　　　　　・複数の弾が当たっても被弾処理を一回になるよう修正
- * 　　　　　　・バグを修正
+ * 9/25 ver1.41・バグを修正
+ * 9/09 ver1.40・自機の弾の角度固定機能を実装
+ * 　　　　　　 ・自機の弾増減機能を実装
+ * 　　　　　　 ・バグを修正
+ * 8/09 ver1.30・スイッチで自機の弾発射を制限できる機能を実装
+ * 　　　　　　 ・文章表示中の自機の弾発射を制限できる機能を実装
+ * 7/17 ver1.20・画像のインデックスに対応するように修正
+ * 　　　　　　 ・透明度の当たり判定を正常に判定できるように修正
+ * 7/16 ver1.10・被弾した対象のIDを変数に格納できる機能を実装
+ * 　　　　　　 ・リージョン・地形タグ設定で弾が消える機能を実装
+ * 　　　　　　 ・複数の弾が当たっても被弾処理を一回になるよう修正
+ * 　　　　　　 ・バグを修正
  * 7/15 ver1.00公開
  * 
  * 
@@ -1070,7 +1072,7 @@
   let hasCollisionOccurred = false;
 
   function updateShotPictureP() {
-    spritesP.forEach((sprite) => {
+    spritesP.forEach((sprite, index) => {
       if (!sprite || sprite._destroyed) return; // スプライトが存在しないか、削除されている場合は処理をスキップ
       sprite._elapsedTime += 1 / 60;
       const easedTime = sprite._easingFunction(sprite._elapsedTime);
