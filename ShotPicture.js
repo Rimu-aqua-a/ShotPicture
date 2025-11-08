@@ -13,7 +13,21 @@
  * using the plugin command "Fire bullet".
  * Please set each parameter before use.
  * 
+ * ※ Due to a fairly large update in 1.50, 
+ * 　 there have been significant changes to the bullet settings.
+ * 　 If you are already using an older version,
+ * 　 we apologize for the inconvenience, but please reset your settings.
+ * 
+ * 
+ * 
  * ■Update history
+ * 
+ * 11/04 ver1.50・Fixed bug.
+ * 　　　　　　  ・Added homing function
+ * 　　　　　　  ・Supports image encryption
+ * 
+ * ―――――――2025―――――――――――――――――――――――
+ * 
  * 9/25 ver1.41・Fixed bug.
  * 9/09 ver1.40・Implemented a function to fix the angle of your own bullet.
  * 　　　　　　 ・Implemented bullet addition function for own aircraft
@@ -47,19 +61,229 @@
  * @desc Set any key. (default is S)
  * @default S
  * 
+ * @param LimitSetP
+ * @text Fire limit setting
+ * @type struct<LimitSettingP>
+ * @desc Fire limit setting
+ * 
+ * @param BulletSetP
+ * @text Bullet settings
+ * @type struct<BulletSettingP>
+ * @desc Bullet settings
+ * 
+ * @param TargetP
+ * @text Target of bullet
+ * @desc It is the target to be hit. Enter -1 for player and ID for event. (Multiple possible "1,2,3", "1~3" etc.)
+ * @default 1
+ * 
+ * @param DeleteWallP
+ * @text Walls that disappear when hit
+ * @desc Please enter the terrain tag and region ID. If it hits there, the bullet will disappear.
+ * @default 1
+ * 
+ * @param HitBulletP
+ * @text Processing when hit
+ * @type struct<HitEventP>
+ * @desc What to do when hit by a bullet
+ * 
+ * 
+ * 
+ * @command BulletSettingChange
+ * @text Change the player bullet settings
+ * @desc Change the settings of the bullets the player shoots
+ * 
+ * @arg LimitChange
+ * @text Fire limit setting
+ * @type struct<LimitSettingChange>
+ * @desc Fire limit setting
+ * 
+ * @arg BulletChange
+ * @text Bullet settings
+ * @type struct<BulletSetChange>
+ * @desc Bullet settings
+ * 
+ * @arg TargetChange
+ * @text Target of bullet
+ * @desc It is the target to be hit. Enter -1 for player and ID for event. (Multiple possible "1,2,3", "1~3" etc.)
+ * @default 1
+ * 
+ * @arg DeleteWallChange
+ * @text Walls that disappear when hit
+ * @desc Please enter the terrain tag and region ID. If it hits there, the bullet will disappear.
+ * @default 1
+ * 
+ * @arg HitBulletChange
+ * @text Processing when hit
+ * @type struct<HitEventChange>
+ * @desc What to do when hit by a bullet
+ * 
+ * 
+ * 
+ * @command AddBullet
+ * @text fire a bullet
+ * @desc The picture will be fired as a bullet from the event that called this.
+ *
+ * @arg Image
+ * @text image
+ * @type file
+ * @require 1
+ * @dir img
+ * @desc This is an image file to be displayed as a bullet.
+ * 
+ * @arg Sound
+ * @text Sound effect
+ * @type file
+ * @dir audio/se
+ * @desc This is the sound effect when fired.
+ * 
+ * @arg BulletNumber
+ * @text number of bullets
+ * @desc This is the number of bullets fired at once.Variables can be specified.
+ * @default 1
+ * 
+ * @arg BulletSpace
+ * @text bullet spacing
+ * @default 1
+ * @desc This is the interval when multiple bullets are fired.
+ * 
+ * @arg BulletSpeed
+ * @text bullet speed
+ * @default 5
+ * @desc This is the speed of the bullet being fired.
+ * 
+ * @arg BulletSizeY
+ * @text bullet size
+ * @default 10
+ * @desc This is the size of the bullet fired.
+ * 
+ * @arg BulletSizeX
+ * @text width of bullet
+ * @desc This is the width of the bullet being fired. 1 makes it a square.
+ * @default 1
+ * 
+ * @arg PlayerTarget
+ * @text Aiming at players
+ * @desc Whether the angle is based on the player (or target).
+ * @type boolean
+ * @default true
+ * 
+ * @arg Angle
+ * @text Angle
+ * @desc The angle from the reference (event direction). Variable can be specified.
+ * @default 0
+ * 
+ * @arg Easing
+ * @text Speed easing
+ * @desc Adjust the speed.
+ * @type select
+ * @option no change
+ * @value linear
+ * @option It's getting faster
+ * @value easeIn
+ * @option It's getting late
+ * @value easeOut
+ * @default linear
+ * 
+ * @arg blendMode
+ * @text How to blendMode bullets
+ * @desc How to combine bullets.
+ * @type select
+ * @option usually
+ * @value 0
+ * @option addition
+ * @value 1
+ * @option multiplication
+ * @value 2
+ * @option screen
+ * @value 3
+ * @default 0
+ * 
+ * @arg Target
+ * @text Target of bullet
+ * @desc It is the target to be hit. Enter -1 for player and ID for event. (Multiple possible "1,2,3", "1~3" etc.)
+ * @default -1
+ * 
+ * @arg TransparencyCheck
+ * @text Whether to determine where there is no opacity
+ * @type boolean
+ * @desc Select whether to use areas without opacity in the picture as hit detection.
+ * @default false
+ * 
+ * @arg EventFollow
+ * @text Bullet Tracking
+ * @desc Setting whether to follow the specified target.
+ * @type struct<EventTarget>
+ * 
+ * @arg DeleteWall
+ * @text Walls that disappear when hit
+ * @desc Please enter the terrain tag and region ID. If it hits there, the bullet will disappear.
+ * @default 1
+ * 
+ * @arg HitBullet
+ * @text Processing when hit
+ * @type struct<HitEvent>
+ * @desc What to do when hit by a bullet
+ *
+ * 
+ * 
+ * @command NotBulletHit
+ * @text bullet passing through
+ * @desc Bullets will now pass through you.
+ * 
+ * 
+ * 
+ * @command NotnotBulletHit
+ * @text Cancel slipping through
+ * @desc Eliminates bullet slippage.
+ *
+ * 
+ */
+
+/*~struct~LimitSettingP:
  * @param PBulletSwitch
  * @text fire limit switch
- * @desc Turn on the specified switch
- * Limit the firing of bullets (unlimited without)
+ * @desc Turning on the specified switch will limit the bullet firing
+ * (no switch means unlimited)
  * @type switch
  * @default 0
  * 
  * @param Messagelimit
  * @text Restrictions while displaying messages
- * @desc Limits the firing of bullets while a message is displayed.
+ * @desc Limits the firing of intermittent bullets while a message is displayed.
  * @type boolean
  * @default true
- * 
+*/
+
+/*~struct~EventTargetP:
+* @param FollowP
+* @text Bullet Tracking
+* @type boolean
+* @desc Decide whether to follow.
+* @default false
+* 
+* @param FollowMethodP
+* @text Tracking target
+* @value near
+* @option Follow the closest opponent
+* @value near
+* @option Follow the farthest opponent
+* @value far
+* @option Follow in order from closest to closest (multiple only)
+* @value closestorder
+* @option Random Follow
+* @value random
+* @default near
+* @desc Determines what to follow.
+* 
+* @param FollowSpeedP
+* @text Following speed
+* @type number
+* @desc Determines how far the bullet will follow from its initial angle.
+* @default 5
+* @max 10
+*/
+
+/*~struct~AngleSettingP:
  * @param AnglefixedP
  * @text fixed direction
  * @desc Set whether to fix the bullet in the specified direction.
@@ -86,9 +310,11 @@
  * @value 9
  * @option upper left
  * @value 7
- * @default linear
- * 
- * 
+ * @default 8
+*/
+
+/*~struct~BulletSettingP:
+ *
  * @param ImageP
  * @text image
  * @type file
@@ -104,7 +330,7 @@
  * 
  * @param BulletNumberP
  * @text number of bullets
- * @desc This is the number of bullets fired at once.
+ * @desc This is the number of bullets fired at once.Variables can be specified.
  * @default 1
  * 
  * @param BulletSpaceP
@@ -139,7 +365,6 @@
  * @value easeOut
  * @default linear
  * 
- * 
  * @param blendModeP
  * @text How to blendMode bullets
  * @type select
@@ -153,10 +378,15 @@
  * @value 3
  * @default 0
  * 
- * @param TargetP
- * @text Target of bullet
- * @desc It is the target to be hit. Enter -1 for player and ID for event. (Multiple possible "1,2,3", "1~3" etc.)
- * @default -1
+ * @param EventFollowP
+ * @text Bullet Tracking
+ * @desc Setting whether to follow the specified target.
+ * @type struct<EventTargetP>
+ * 
+ * @param AngleSetP
+ * @text fixed direction
+ * @type struct<AngleSettingP>
+ * @desc Set whether to fix the bullet in the specified direction.
  *
  * @param TransparencyCheckP
  * @text Whether to determine where there is no opacity
@@ -164,119 +394,8 @@
  * @desc Select whether to use areas without opacity in the picture as hit detection.
  * @default false
  * 
- * @param DeleteWallP
- * @text Walls that disappear when hit
- * @desc Please enter the terrain tag and region ID. If it hits there, the bullet will disappear.
- * @default 1
- * 
- * @param HitBulletP
- * @text Processing when hit
- * @type struct<HitEventP>
- * @desc What to do when hit by a bullet
  *
- * 
- * 
- * @command AddBullet
- * @text fire a bullet
- * @desc The picture will be fired as a bullet from the event that called this.
- *
- * @arg Image
- * @text image
- * @type file
- * @require 1
- * @dir img
- * @desc This is an image file to be displayed as a bullet.
- * 
- * @arg Sound
- * @text Sound effect
- * @type file
- * @dir audio/se
- * @desc This is the sound effect when fired.
- * 
- * @arg BulletNumber
- * @text number of bullets
- * @desc This is the number of bullets fired at once.
- * @default 1
- * 
- * @arg BulletSpace
- * @text bullet spacing
- * @default 1
- * @desc This is the interval when multiple bullets are fired.
- * 
- * @arg BulletSpeed
- * @text bullet speed
- * @default 5
- * @desc This is the speed of the bullet being fired.
- * 
- * @arg BulletSizeY
- * @text bullet size
- * @default 10
- * @desc This is the size of the bullet fired.
- * 
- * @arg BulletSizeX
- * @text width of bullet
- * @desc This is the width of the bullet being fired. 1 makes it a square.
- * @default 1
- * 
- * @arg Easing
- * @text Speed easing
- * @desc Adjust the speed.
- * @type select
- * @option no change
- * @value linear
- * @option It's getting faster
- * @value easeIn
- * @option It's getting late
- * @value easeOut
- * @default linear
- * 
- * 
- * @arg blendMode
- * @text How to blendMode bullets
- * @type select
- * @option usually
- * @value 0
- * @option addition
- * @value 1
- * @option multiplication
- * @value 2
- * @option screen
- * @value 3
- * @default 0
- * 
- * @arg Target
- * @text Target of bullet
- * @desc It is the target to be hit. Enter -1 for player and ID for event. (Multiple possible "1,2,3", "1~3" etc.)
- * @default -1
- *
- * @arg TransparencyCheck
- * @text Whether to determine where there is no opacity
- * @type boolean
- * @desc Select whether to use areas without opacity in the picture as hit detection.
- * @default false
- * 
- * @arg DeleteWall
- * @text Walls that disappear when hit
- * @desc Please enter the terrain tag and region ID. If it hits there, the bullet will disappear.
- * @default 1
- * 
- * @arg HitBullet
- * @text Processing when hit
- * @type struct<HitEventP>
- * @desc What to do when hit by a bullet
- * 
- * 
- * 
- * @command NotBulletHit
- * @text bullet passing through
- * @desc Bullets will now pass through you.
- * 
- * @command NotnotBulletHit
- * @text Cancel slipping through
- * @desc Eliminates bullet slippage.
- *
- * 
- */
+*/
 
 /*~struct~HitEventP:
 * @param DeleteBulletP
@@ -328,8 +447,220 @@
 * @type switch
 * @desc This is a switch that turns on when a bullet hits.
 * @default 0
+*/
+
+/*~struct~EventTarget:
+* @param Follow
+* @text Bullet Tracking
+* @type boolean
+* @desc Decide whether to follow.
+* @default false
 * 
+* @param FollowMethod
+* @text Tracking target
+* @value near
+* @option Follow the closest opponent
+* @value near
+* @option Follow the farthest opponent
+* @value far
+* @option Follow in order from closest to closest (multiple only)
+* @value closestorder
+* @option Random Follow
+* @value random
+* @default near
+* @desc Determines what to follow.
 * 
+* @param FollowSpeed
+* @text Following speed
+* @type number
+* @desc Determines how far the bullet will follow from its initial angle.
+* @default 5
+* @max 10
+*/
+
+
+
+/*~struct~LimitSettingChange:
+ * @param PBulletSwitchChange
+ * @text fire limit switch
+ * @desc Turning on the specified switch will limit the
+ * bullet firing (no switch means unlimited)
+ * @type switch
+ * @default 0
+ * 
+ * @param MessagelimitChange
+ * @text Restrictions while displaying messages
+ * @desc Limits the firing of intermittent bullets while a message is displayed.
+ * @type boolean
+ * @default true
+*/
+
+/*~struct~BulletSetChange:
+ *
+ * @param ImageChange
+ * @text image
+ * @type file
+ * @require 1
+ * @dir img
+ * @desc This is an image file to be displayed as a bullet.
+ * 
+ * @param SoundChange
+ * @text Sound effect
+ * @type file
+ * @dir audio/se
+ * @desc This is the sound effect when fired.
+ * 
+ * @param BulletNumberChange
+ * @text number of bullets
+ * @desc This is the number of bullets fired at once.
+ * @default 1
+ * 
+ * @param BulletSpaceChange
+ * @text bullet spacing
+ * @default 1
+ * @desc This is the interval when multiple bullets are fired.
+ * 
+ * @param BulletSpeedChange
+ * @text bullet speed
+ * @default 5
+ * @desc This is the speed of the bullet being fired.
+ * 
+ * @param BulletSizeYChange
+ * @text bullet size
+ * @default 10
+ * @desc This is the size of the bullet fired.
+ * 
+ * @param BulletSizeXChange
+ * @text width of bullet
+ * @desc This is the width of the bullet being fired. 1 makes it a square.
+ * @default 1
+ * 
+ * @param EasingChange
+ * @text Speed easing
+ * @desc Adjust the speed.
+ * @type select
+ * @option no change
+ * @value linear
+ * @option It's getting faster
+ * @value easeIn
+ * @option It's getting late
+ * @value easeOut
+ * @default linear
+ * 
+ * @param blendModeChange
+ * @text How to blendMode bullets
+ * @type select
+ * @option usually
+ * @value 0
+ * @option addition
+ * @value 1
+ * @option multiplication
+ * @value 2
+ * @option screen
+ * @value 3
+ * @default 0
+ * 
+ * @param EventFollowChange
+ * @text Bullet Tracking
+ * @desc Setting whether to follow the specified target.
+ * @type struct<EventTargetChange>
+ * 
+ * @param AngleSetChange
+ * @text Fixed bullet angle setting
+ * @type struct<AngleSettingChange>
+ * @desc Fixed bullet angle setting
+ *
+ * @param TransparencyCheckChange
+ * @text Whether to determine where there is no opacity
+ * @type boolean
+ * @desc Select whether to use areas without opacity in the picture as hit detection.
+ * @default false
+ *
+*/
+
+/*~struct~EventTargetChange:
+* @param FollowChange
+ * @text Bullet Tracking
+* @type boolean
+ * @desc Setting whether to follow the specified target.
+* @default true
+* 
+* @param FollowMethodChange
+* @text Tracking target
+* @value near
+* @option Follow the closest opponent
+* @value near
+* @option Follow the farthest opponent
+* @value far
+* @option Follow in order from closest to closest (multiple only)
+* @value closestorder
+* @option Random Follow
+* @value random
+* @default near
+* @desc Determines what to follow.
+* 
+* @param FollowSpeedChange
+* @text Following speed
+* @type number
+* @desc Determines how far the bullet will follow from its initial angle.
+* @default 5
+* @max 10
+*/
+
+/*~struct~AngleSettingChange:
+ * @param AnglefixedChange
+ * @text fixed direction
+ * @desc Set whether to fix the bullet in the specified direction.
+ * @type boolean
+ * @default false
+ * 
+ * @param AngleChange
+ * @text Specified direction
+ * @desc Set the direction when fixing the direction.
+ * @type select
+ * @option under
+ * @value 2
+ * @option top
+ * @value 8
+ * @option right
+ * @value 4
+ * @option left
+ * @value 6
+ * @option lower right
+ * @value 3
+ * @option lower left
+ * @value 1
+ * @option upper right
+ * @value 9
+ * @option upper left
+ * @value 7
+ * @default 8
+*/
+
+/*~struct~HitEventChange:
+* @param DeleteBulletChange
+* @text Delete bullets
+* @type boolean
+* @desc Delete the bullet when it hits.
+* @default true
+* 
+* @param HitTargetChange
+* @text Target storage variable
+* @type variable
+* @desc This is a variable that stores the opponent hit by the bullet.
+* @default 0
+* 
+* @param HitCommonChange
+* @text common event
+* @type common_event
+* @desc This is a common event that is triggered when a bullet hits.
+* @default 0
+*
+* @param HitSwitchChange
+* @text Switch
+* @type switch
+* @desc This is a switch that turns on when a bullet hits.
+* @default 0
 */
 
 /*:ja
@@ -343,7 +674,20 @@
  * プラグインコマンド「弾の発射」を使うことでイベントから弾を発射できます。
  * 各パラメーターを設定の上ご使用ください。
  * 
+ * ※1.50にてそこそこ大きなアップデートを行った影響で、
+ * 　弾の設定項目に大幅な変更があります。既に過去バージョンを使用している場合は
+ * 　お手数ですが再設定をお願いいたします。
+ * 
+ * 
+ * 
  * ■更新履歴
+ * 
+ * 11/04 ver1.50・バグを修正
+ * 　　　　　　  ・ホーミング機能を追加
+ * 　　　　　　  ・画像の暗号化に対応
+ * 
+ * ―――――――2025―――――――――――――――――――――――
+ * 
  * 9/25 ver1.41・バグを修正
  * 9/09 ver1.40・自機の弾の角度固定機能を実装
  * 　　　　　　 ・自機の弾増減機能を実装
@@ -370,121 +714,20 @@
  * @desc 任意のキーを設定できます。(デフォルトはS)
  * @default S
  * 
- * @param PBulletSwitch
- * @text 発射制限スイッチ
- * @desc 指定したスイッチをオンにすると
- * 弾の発射を制限します(なしで無制限)
- * @type switch
- * @default 0
+ * @param LimitSetP
+ * @text 発射制限設定
+ * @type struct<LimitSettingP>
+ * @desc 発射制限設定
  * 
- * @param Messagelimit
- * @text メッセージ表示中制限
- * @desc メッセージ表示中の間弾の発射を制限します。
- * @type boolean
- * @default true
- * 
- * @param AnglefixedP
- * @text 方向固定
- * @desc 指定した方向に弾を固定するかどうかを設定します。
- * @type boolean
- * @default false
- * 
- * @param AngleP
- * @text 指定方向
- * @desc 方向を固定する場合の方向を設定します。
- * @type select
- * @option 下
- * @value 2
- * @option 上
- * @value 8
- * @option 右
- * @value 4
- * @option 左
- * @value 6
- * @option 右下
- * @value 3
- * @option 左下
- * @value 1
- * @option 右上
- * @value 9
- * @option 左上
- * @value 7
- * @default 8
- * 
- * @param ImageP
- * @text 画像
- * @type file
- * @require 1
- * @dir img
- * @desc 弾として表示する画像ファイルです。
- * 
- * @param SoundP
- * @text 効果音
- * @type file
- * @dir audio/se
- * @desc 発射した時の効果音です。
- * 
- * @param BulletNumberP
- * @text 弾の数
- * @desc 一度に撃ち出す弾の数です。
- * @default 1
- * 
- * @param BulletSpaceP
- * @text 弾の間隔
- * @default 1
- * @desc 撃ち出す弾が複数の場合の間隔です。
- * 
- * @param BulletSpeedP
- * @text 弾の速度
- * @default 5
- * @desc 撃ち出す弾の速度です。
- * 
- * @param BulletSizeYP
- * @text 弾の大きさ
- * @default 10
- * @desc 撃ち出す弾の大きさです。
- * 
- * @param BulletSizeXP
- * @text 弾の横幅
- * @desc 撃ち出す弾の横幅です。1で正方形になります。
- * @default 1
- * 
- * @param EasingP
- * @text 速度のイージング
- * @desc 速度に緩急を付けられます。
- * @type select
- * @option 変化なし
- * @value linear
- * @option だんだん早くなる
- * @value easeIn
- * @option だんだん遅くなる
- * @value easeOut
- * @default linear
- * 
- * 
- * @param blendModeP
- * @text 弾の合成方法
- * @type select
- * @option 通常
- * @value 0
- * @option 加算
- * @value 1
- * @option 乗算
- * @value 2
- * @option スクリーン
- * @value 3
- * @default 0
+ * @param BulletSetP
+ * @text 弾の設定
+ * @type struct<BulletSettingP>
+ * @desc 弾の設定
  * 
  * @param TargetP
  * @text 被弾対象
  * @desc 被弾する対象です。プレイヤーの場合は-1、イベントの場合はIDを入力してください。(複数可「1,2,3」、「1~3」など)
- * @default -1
- *
- * @param TransparencyCheckP
- * @text 不透明度が無い所を判定するか
- * @type boolean
- * @desc ピクチャの不透明度が無い場所も当たり判定として使用するかを選択します。
- * @default false
+ * @default 1
  * 
  * @param DeleteWallP
  * @text 当たると消える壁等
@@ -495,17 +738,39 @@
  * @text 当たった時の処理
  * @type struct<HitEventP>
  * @desc 弾が当たった際の処理
- *
  * 
- * @command BulletNumberPlus
- * @text 自機の弾数変更
- * @desc 自機の撃つ弾の数を変更します
  * 
- * @arg BulletNumberP2
- * @text 追加数
- * @desc 追加(-で減少)する弾の数です。
- * @Min -999
+ * 
+ * 
+ * @command BulletSettingChange
+ * @text 自機の弾設定変更
+ * @desc 自機の撃つ弾の設定を変更します
+ * 
+ * @arg LimitChange
+ * @text 発射制限設定
+ * @type struct<LimitSettingChange>
+ * @desc 発射制限設定
+ * 
+ * @arg BulletChange
+ * @text 弾の設定
+ * @type struct<BulletSetChange>
+ * @desc 弾の設定
+ * 
+ * @arg TargetChange
+ * @text 被弾対象
+ * @desc 被弾する対象です。プレイヤーの場合は-1、イベントの場合はIDを入力してください。(複数可「1,2,3」、「1~3」など)
+ * @default -1
+ * 
+ * @arg DeleteWallChange
+ * @text 当たると消える壁等
+ * @desc 地形タグやリージョンIDを入れてください。そこに当たると弾が消滅します。
  * @default 1
+ * 
+ * @arg HitBulletChange
+ * @text 当たった時の処理
+ * @type struct<HitEventChange>
+ * @desc 弾が当たった際の処理
+ * 
  * 
  * 
  * @command AddBullet
@@ -527,7 +792,7 @@
  * 
  * @arg BulletNumber
  * @text 弾の数
- * @desc 一度に撃ち出す弾の数です。
+ * @desc 一度に撃ち出す弾の数です。変数指定可能。
  * @default 1
  * 
  * @arg BulletSpace
@@ -558,7 +823,7 @@
  * 
  * @arg Angle
  * @text 角度
- * @desc 基準からの角度です。
+ * @desc 基準(イベントの向き)からの角度です。変数指定可能。
  * @default 0
  * 
  * @arg Easing
@@ -591,12 +856,17 @@
  * @text 被弾対象
  * @desc 被弾する対象です。プレイヤーの場合は-1、イベントの場合はIDを入力してください。(複数可「1,2,3」、「1~3」など)
  * @default -1
- *
+ * 
  * @arg TransparencyCheck
  * @text 不透明度が無い所を判定するか
  * @type boolean
  * @desc ピクチャの不透明度が無い場所も当たり判定として使用するかを選択します。
  * @default false
+ * 
+ * @arg EventFollow
+ * @text 弾の追従
+ * @desc 指定したターゲットに追従するかの設定。
+ * @type struct<EventTarget>
  * 
  * @arg DeleteWall
  * @text 当たると消える壁等
@@ -607,12 +877,14 @@
  * @text 当たった時の処理
  * @type struct<HitEvent>
  * @desc 弾が当たった際の処理
- * 
+ *
  * 
  * 
  * @command NotBulletHit
  * @text 弾のすり抜け
  * @desc 弾がすり抜けるようになります。
+ * 
+ * 
  * 
  * @command NotnotBulletHit
  * @text すり抜け解除
@@ -620,6 +892,164 @@
  *
  * 
  */
+
+/*~struct~LimitSettingP:
+ * @param PBulletSwitch
+ * @text 発射制限スイッチ
+ * @desc 指定したスイッチをオンにすると
+ * 弾の発射を制限します(なしで無制限)
+ * @type switch
+ * @default 0
+ * 
+ * @param Messagelimit
+ * @text メッセージ表示中制限
+ * @desc メッセージ表示中の間弾の発射を制限します。
+ * @type boolean
+ * @default true
+*/
+
+/*~struct~EventTargetP:
+* @param FollowP
+* @text 弾の追従
+* @type boolean
+* @desc 追従するかを決定します。
+* @default false
+* 
+* @param FollowMethodP
+* @text 追従対象
+* @type select
+* @option 一番近い相手を追従
+* @value near
+* @option 一番遠い相手を追従
+* @value far
+* @option 近い順から順番に追従(複数のみ)
+* @value closestorder
+* @option ランダムに追従
+* @value random
+* @default near
+* @desc 追従する対象を決定します。
+* 
+* @param FollowSpeedP
+* @text 追従速度
+* @type number
+* @desc 初期角度から弾がどの程度追従するかを決定します。
+* @default 5
+* @max 10
+*/
+
+/*~struct~AngleSettingP:
+ * @param AnglefixedP
+ * @text 方向固定
+ * @desc 指定した方向に弾を固定するかどうかを設定します。
+ * @type boolean
+ * @default false
+ * 
+ * @param AngleP
+ * @text 指定方向
+ * @desc 方向を固定する場合の方向を設定します。
+ * @type select
+ * @option 下
+ * @value 2
+ * @option 上
+ * @value 8
+ * @option 右
+ * @value 4
+ * @option 左
+ * @value 6
+ * @option 右下
+ * @value 3
+ * @option 左下
+ * @value 1
+ * @option 右上
+ * @value 9
+ * @option 左上
+ * @value 7
+ * @default 8
+*/
+
+/*~struct~BulletSettingP:
+ *
+ * @param ImageP
+ * @text 画像
+ * @type file
+ * @require 1
+ * @dir img
+ * @desc 弾として表示する画像ファイルです。
+ * 
+ * @param SoundP
+ * @text 効果音
+ * @type file
+ * @dir audio/se
+ * @desc 発射した時の効果音です。
+ * 
+ * @param BulletNumberP
+ * @text 弾の数
+ * @desc 一度に撃ち出す弾の数です。変数指定可能。
+ * @default 1
+ * 
+ * @param BulletSpaceP
+ * @text 弾の間隔
+ * @default 1
+ * @desc 撃ち出す弾が複数の場合の間隔です。
+ * 
+ * @param BulletSpeedP
+ * @text 弾の速度
+ * @default 5
+ * @desc 撃ち出す弾の速度です。
+ * 
+ * @param BulletSizeYP
+ * @text 弾の大きさ
+ * @default 10
+ * @desc 撃ち出す弾の大きさです。
+ * 
+ * @param BulletSizeXP
+ * @text 弾の横幅
+ * @desc 撃ち出す弾の横幅です。1で正方形になります。
+ * @default 1
+ * 
+ * @param EasingP
+ * @text 速度のイージング
+ * @desc 速度に緩急を付けられます。
+ * @type select
+ * @option 変化なし
+ * @value linear
+ * @option だんだん早くなる
+ * @value easeIn
+ * @option だんだん遅くなる
+ * @value easeOut
+ * @default linear
+ * 
+ * @param blendModeP
+ * @text 弾の合成方法
+ * @type select
+ * @option 通常
+ * @value 0
+ * @option 加算
+ * @value 1
+ * @option 乗算
+ * @value 2
+ * @option スクリーン
+ * @value 3
+ * @default 0
+ * 
+ * @param EventFollowP
+ * @text 弾の追従
+ * @desc 指定したターゲットに追従するかの設定。
+ * @type struct<EventTargetP>
+ * 
+ * @param AngleSetP
+ * @text 弾の角度固定設定
+ * @type struct<AngleSettingP>
+ * @desc 弾の角度固定設定
+ *
+ * @param TransparencyCheckP
+ * @text 不透明度が無い所を判定するか
+ * @type boolean
+ * @desc ピクチャの不透明度が無い場所も当たり判定として使用するかを選択します。
+ * @default false
+ * 
+ *
+*/
 
 /*~struct~HitEventP:
 * @param DeleteBulletP
@@ -671,9 +1101,222 @@
 * @type switch
 * @desc 弾が当たった際にonになるスイッチです。
 * @default 0
-* 
-* 
 */
+
+/*~struct~EventTarget:
+* @param Follow
+* @text 弾の追従
+* @type boolean
+* @desc 追従するかを決定します。
+* @default false
+* 
+* @param FollowMethod
+* @text 追従対象
+* @type select
+* @option 一番近い相手を追従
+* @value near
+* @option 一番遠い相手を追従
+* @value far
+* @option 近い順から順番に追従(複数のみ)
+* @value closestorder
+* @option ランダムに追従
+* @value random
+* @default near
+* @desc 追従する対象を決定します。
+* 
+* @param FollowSpeed
+* @text 追従速度
+* @type number
+* @desc 初期角度から弾がどの程度追従するかを決定します。
+* @default 5
+* @max 10
+*/
+
+
+
+/*~struct~LimitSettingChange:
+ * @param PBulletSwitchChange
+ * @text 発射制限スイッチ
+ * @desc 指定したスイッチをオンにすると
+ * 弾の発射を制限します(なしで無制限)
+ * @type switch
+ * @default 0
+ * 
+ * @param MessagelimitChange
+ * @text メッセージ表示中制限
+ * @desc メッセージ表示中の間弾の発射を制限します。
+ * @type boolean
+ * @default true
+*/
+
+/*~struct~BulletSetChange:
+ *
+ * @param ImageChange
+ * @text 画像
+ * @type file
+ * @require 1
+ * @dir img
+ * @desc 弾として表示する画像ファイルです。
+ * 
+ * @param SoundChange
+ * @text 効果音
+ * @type file
+ * @dir audio/se
+ * @desc 発射した時の効果音です。
+ * 
+ * @param BulletNumberChange
+ * @text 弾の数
+ * @desc 一度に撃ち出す弾の数です。変数指定可能。
+ * @default 1
+ * 
+ * @param BulletSpaceChange
+ * @text 弾の間隔
+ * @default 1
+ * @desc 撃ち出す弾が複数の場合の間隔です。
+ * 
+ * @param BulletSpeedChange
+ * @text 弾の速度
+ * @default 5
+ * @desc 撃ち出す弾の速度です。
+ * 
+ * @param BulletSizeYChange
+ * @text 弾の大きさ
+ * @default 10
+ * @desc 撃ち出す弾の大きさです。
+ * 
+ * @param BulletSizeXChange
+ * @text 弾の横幅
+ * @desc 撃ち出す弾の横幅です。1で正方形になります。
+ * @default 1
+ * 
+ * @param EasingChange
+ * @text 速度のイージング
+ * @desc 速度に緩急を付けられます。
+ * @type select
+ * @option 変化なし
+ * @value linear
+ * @option だんだん早くなる
+ * @value easeIn
+ * @option だんだん遅くなる
+ * @value easeOut
+ * @default linear
+ * 
+ * @param blendModeChange
+ * @text 弾の合成方法
+ * @type select
+ * @option 通常
+ * @value 0
+ * @option 加算
+ * @value 1
+ * @option 乗算
+ * @value 2
+ * @option スクリーン
+ * @value 3
+ * @default 0
+ * 
+ * @param EventFollowChange
+ * @text 弾の追従
+ * @desc 指定したターゲットに追従するかの設定。
+ * @type struct<EventTargetChange>
+ * 
+ * @param AngleSetChange
+ * @text 弾の角度固定設定
+ * @type struct<AngleSettingChange>
+ * @desc 弾の角度固定設定
+ *
+ * @param TransparencyCheckChange
+ * @text 不透明度が無い所を判定するか
+ * @type boolean
+ * @desc ピクチャの不透明度が無い場所も当たり判定として使用するかを選択します。
+ * @default false
+ *
+*/
+
+/*~struct~EventTargetChange:
+* @param FollowChange
+* @text 弾の追従
+* @type boolean
+* @desc 追従するかを決定します。
+* @default true
+* 
+* @param FollowMethodChange
+* @text 追従対象
+* @type select
+* @option 一番近い相手を追従
+* @value near
+* @option 一番遠い相手を追従
+* @value far
+* @option 近い順から順番に追従(複数のみ)
+* @value closestorder
+* @option ランダムに追従
+* @value random
+* @default near
+* @desc 追従する対象を決定します。
+* 
+* @param FollowSpeedChange
+* @text 追従速度
+* @type number
+* @desc 初期角度から弾がどの程度追従するかを決定します。
+* @default 5
+* @max 10
+*/
+
+/*~struct~AngleSettingChange:
+ * @param AnglefixedChange
+ * @text 方向固定
+ * @desc 指定した方向に弾を固定するかどうかを設定します。
+ * @type boolean
+ * @default false
+ * 
+ * @param AngleChange
+ * @text 指定方向
+ * @desc 方向を固定する場合の方向を設定します。
+ * @type select
+ * @option 下
+ * @value 2
+ * @option 上
+ * @value 8
+ * @option 右
+ * @value 4
+ * @option 左
+ * @value 6
+ * @option 右下
+ * @value 3
+ * @option 左下
+ * @value 1
+ * @option 右上
+ * @value 9
+ * @option 左上
+ * @value 7
+ * @default 8
+*/
+
+/*~struct~HitEventChange:
+* @param DeleteBulletChange
+* @text 弾の削除
+* @type boolean
+* @desc 弾が当たった時に弾を削除します。
+* @default true
+* 
+* @param HitTargetChange
+* @text 対象格納変数
+* @type variable
+* @desc 弾が当たった相手を格納する変数です。
+* @default 0
+* 
+* @param HitCommonChange
+* @text コモンイベント
+* @type common_event
+* @desc 弾が当たった際に起動するコモンイベントです。
+* @default 0
+*
+* @param HitSwitchChange
+* @text スイッチ
+* @type switch
+* @desc 弾が当たった際にonになるスイッチです。
+* @default 0
+*/
+
 
 
 (() => {
@@ -682,6 +1325,55 @@
 
   function setDefault(str, def) {
     return str == undefined || str == "" ? def : str;
+  }
+
+  function autoLoadImage(filePath) {
+    const baseMatch = filePath.match(/^([^/\\]+)[/\\](.+?)(?:\.(\w+))?$/i);
+    if (!baseMatch) {
+      console.error(`Invalid path: ${filePath}`);
+      return null;
+    }
+
+    const [_, folder, filename, ext] = baseMatch;
+    const name = filename;
+
+    switch (folder.toLowerCase()) {
+      case "system":
+        return ImageManager.loadSystem(name);
+      case "pictures":
+        return ImageManager.loadPicture(name);
+      case "characters":
+        return ImageManager.loadCharacter(name);
+      case "parallaxes":
+        return ImageManager.loadParallax(name);
+      case "faces":
+        return ImageManager.loadFace(name);
+      case "sv_enemies":
+        return ImageManager.loadSvEnemy(name);
+      case "sv_actors":
+        return ImageManager.loadSvActor(name);
+      case "animations":
+        return ImageManager.loadAnimation(name);
+      case "tilesets":
+        return ImageManager.loadTileset(name);
+      case "battlebacks1":
+        return ImageManager.loadBattleback1(name);
+      case "battlebacks2":
+        return ImageManager.loadBattleback2(name);
+      case "titles1":
+        return ImageManager.loadTitle1(name);
+      case "titles2":
+        return ImageManager.loadTitle2(name);
+      case "enemies":
+        return ImageManager.loadEnemy(name);
+      case "icons":
+        return ImageManager.loadIcon(name);
+      case "backgrounds":
+        return ImageManager.loadBackground(name);
+      default:
+        console.warn(`Unknown image folder: img/${folder}/`);
+        return ImageManager.loadBitmap(`img/${folder}/`, name);
+    }
   }
 
 
@@ -774,93 +1466,110 @@
     }
     return null;
   }
-  
 
-  function FlameGet(fileName){
+
+  function FlameGet(fileName) {
     const pluginFilePath = "GALV_CharacterFramesMZ";
     if (pluginFilePath) {
-  const parameters = PluginManager.parameters(pluginFilePath);
-  const fileSymbol = parameters["fileSymbol"];
+      const parameters = PluginManager.parameters(pluginFilePath);
+      const fileSymbol = parameters["fileSymbol"];
 
-  let frame = 3; // デフォルトのフレーム数
-  let pattern = fileSymbol+"\\d+";
-  if (fileName.indexOf(fileSymbol) !== -1) {
-  const fileName2 = fileName.replace(new RegExp(pattern), fileSymbol);
-  let pattern2 = /%\((\d+)\)/;
-  let match2 = fileName2.match(pattern2);
-  if (match2) {
-    frame = match2[1];
-    return frame;
-} else {
-  return frame;
-}
-}else{
-  return frame;
-}
-}else{
-  let frame = 3
-  return frame;
-}
+      let frame = 3; // デフォルトのフレーム数
+      let pattern = fileSymbol + "\\d+";
+      if (fileName.indexOf(fileSymbol) !== -1) {
+        const fileName2 = fileName.replace(new RegExp(pattern), fileSymbol);
+        let pattern2 = /%\((\d+)\)/;
+        let match2 = fileName2.match(pattern2);
+        if (match2) {
+          frame = match2[1];
+          return frame;
+        } else {
+          return frame;
+        }
+      } else {
+        return frame;
+      }
+    } else {
+      let frame = 3
+      return frame;
+    }
 
-}
+  }
 
 
 
   function getTargetAlphaPixel(sprite, localX, localY) {
-    if (!sprite || !sprite.bitmap || !sprite.bitmap.isReady() || sprite.scale.x === 0 || sprite.scale.y === 0) {
-      return false;
-    }
-  
-    if (sprite.scale.x < 0.01 || sprite.scale.y < 0.01) {
-      return false;
-    }
-  
-    // 座標の計算
+    if (!sprite || !sprite.bitmap || !sprite.bitmap.isReady()) return false;
+    if (sprite.scale.x === 0 || sprite.scale.y === 0) return false;
+    if (sprite.scale.x < 0.01 || sprite.scale.y < 0.01) return false;
+
     const dx = localX;
     const dy = localY;
-  
-    // スプライトの回転角度と中心点の補正
     const sin = Math.sin(-sprite.rotation);
     const cos = Math.cos(-sprite.rotation);
     const bx = Math.floor(dx * cos + dy * -sin) / sprite.scale.x + (sprite.anchor.x * sprite.width);
     const by = Math.floor(dx * sin + dy * cos) / sprite.scale.y + (sprite.anchor.y * sprite.height);
-    
-    // 画像の使用インデックスに基づくビットマップの選択
+
     const character = sprite._character;
-    if (!character) {
-      return false;
-    }
-  
-    const index = character.characterIndex();
-    const sheetWidth = sprite.bitmap.width;
-    const sheetHeight = sprite.bitmap.height;
+    if (!character) return false;
+
     const fileName = decodeURIComponent(getSpriteFileName(sprite));
-    if (!fileName) {
-      return false;
+    const bitmap = sprite.bitmap;
+    const sheetWidth = bitmap.width;
+    const sheetHeight = bitmap.height;
+
+    if (character._tileId === 0) {
+      const index = character.characterIndex ? character.characterIndex() : 0;
+      const frame = FlameGet(fileName);
+      let frameWidth = sheetWidth / (frame * 4);
+      let frameHeight = sheetHeight / 8;
+      if (fileName.includes("$")) {
+        frameWidth = sheetWidth / frame;
+        frameHeight = sheetHeight / 4;
+      }
+
+      const direction = character.direction ? character.direction() : 2;
+      const pattern = character.pattern ? character.pattern() : 1;
+      const offsetX = (index % 4) * frame * frameWidth + pattern * frameWidth;
+      const offsetY = (Math.floor(index / 2) * 2 + (direction / 2 - 1)) * frameHeight;
+      const targetX = bx + offsetX;
+      const targetY = by + offsetY;
+
+      if (targetX < 0 || targetX >= sheetWidth || targetY < 0 || targetY >= sheetHeight) return false;
+      const alpha = bitmap.getAlphaPixel(targetX, targetY);
+      return alpha !== 0;
     }
-    const frame = FlameGet(fileName);
-    let frameWidth = sheetWidth / (frame * 4);
-    let frameHeight = sheetHeight / 8;
-    if (fileName.includes('$')) {
-    frameWidth = sheetWidth / frame;
-    frameHeight = sheetHeight / 4;
+
+    const tileId = character._tileId;
+    if (tileId > 0) {
+      const tileset = $gameMap.tileset();
+      if (!tileset) return false;
+
+      const tileSize = $gameMap.tileWidth();
+      const setIndex = Math.floor(tileId / 256);
+      const tilesetName = tileset.tilesetNames[setIndex];
+      if (!tilesetName) return false;
+
+      const tileBitmap = ImageManager.loadTileset(tilesetName);
+      if (!tileBitmap.isReady()) return false;
+
+      const localId = tileId % 256;
+      const sx = (localId % 8) * tileSize;
+      const sy = Math.floor(localId / 8) * tileSize;
+
+      const targetX = sx + bx;
+      const targetY = sy + by;
+      if (targetX < 0 || targetX >= tileBitmap.width || targetY < 0 || targetY >= tileBitmap.height) {
+        return false;
+      }
+
+      const alpha = tileBitmap.getAlphaPixel(targetX, targetY);
+      return alpha !== 0;
     }
-  
-    const characterDirection = character.direction();
-    const characterPattern = character.pattern();
-    const offsetX = (index % 4) * frame * frameWidth + characterPattern * frameWidth;
-    const offsetY = (Math.floor(index / 2) * 2 + (characterDirection / 2 - 1)) * frameHeight;
-    const targetX = bx + offsetX;
-    const targetY = by + offsetY;
-    // 透明度の取得
-    if (targetX < 0 || targetX >= sheetWidth || targetY < 0 || targetY >= sheetHeight) {
-      return false;
-    }
-    const alpha = sprite.bitmap.getAlphaPixel(targetX, targetY);
-    return alpha !== 0;
+
+    return false;
   }
-  
-  
+
 
   function checkCollision(TargetSprite, bulletSprite) {
     // プレイヤーと弾のポリゴン頂点を取得
@@ -909,11 +1618,9 @@
     return overlappingPixels;
   }
 
-
   // 元のterminate関数を保存
   const _Scene_Map_terminate = Scene_Map.prototype.terminate;
   let spritesP = [];
-  let sprites = [];
 
   function toBoolean(str, def) {
     if (str === true || str === "true") {
@@ -976,24 +1683,29 @@
 
   if (PlayerBullet == "true") {
     const params = {
-      nameP: setDefault(param.ImageP, ""),
-      numberP: Number(setDefault(param.BulletNumberP, 1)),
-      PBulletSwitch: Number(setDefault(param.PBulletSwitch, 0)),
-      Messagelimit: setDefault(param.Messagelimit,""),
-      AnglefixedP: toBoolean(setDefault(param.AnglefixedP, false)),
-      AngleP: Number(setDefault(param.AngleP, 8)),
-      spaceP: Number(setDefault(param.BulletSpaceP, 1)),
-      speedP: Number(setDefault(param.BulletSpeedP, 10)),
-      scaleYP: Number(setDefault(param.BulletSizeYP, 10)),
-      sizeXP: Number(setDefault(param.BulletSizeXP, 1)),
-      transparencyCheckP: setDefault(param.TransparencyCheckP, false),
-      blendModeP: Number(setDefault(param.blendModeP, 0)),
-      DeleteWallP: Number(setDefault(param.DeleteWallP, 1)),
+      PBulletSwitch: toNumber(JSON.parse(param.LimitSetP).PBulletSwitch, 0),
+      Messagelimit: toBoolean(JSON.parse(param.LimitSetP).Messagelimit, true),
+      nameP: setDefault(JSON.parse(param.BulletSetP).ImageP, ""),
+      se: setDefault(JSON.parse(param.BulletSetP).SoundP, ""),
+      numberP: setDefault(JSON.parse(param.BulletSetP).BulletNumberP, 1),
+      spaceP: toNumber(JSON.parse(param.BulletSetP).BulletSpaceP, 1),
+      speedP: toNumber(JSON.parse(param.BulletSetP).BulletSpeedP, 10),
+      scaleYP: toNumber(JSON.parse(param.BulletSetP).BulletSizeYP, 10),
+      sizeXP: toNumber(JSON.parse(param.BulletSetP).BulletSizeXP, 1),
+      easingTypeP: setDefault(JSON.parse(param.BulletSetP).EasingP, "linear"),
+      blendModeP: toNumber(JSON.parse(param.BulletSetP).blendModeP, 0),
+      FollowP: toBoolean(JSON.parse(JSON.parse(param.BulletSetP).EventFollowP).FollowP, false),
+      FollowTypeP: toNumber(JSON.parse(JSON.parse(param.BulletSetP).EventFollowP).FollowMethodP, 0),
+      FollowSpeedP: toNumber(JSON.parse(JSON.parse(param.BulletSetP).EventFollowP).FollowSpeedP, 0),
+      AnglefixedP: toBoolean(JSON.parse(JSON.parse(param.BulletSetP).AngleSetP).AnglefixedP, false),
+      AngleP: toNumber(JSON.parse(JSON.parse(param.BulletSetP).AngleSetP).AngleP, 8),
+      transparencyCheckP: toBoolean(JSON.parse(param.BulletSetP).TransparencyCheckP, false),
+      targetP: toNumber(param.TargetP, 1),
+      DeleteWallP: toNumber(param.DeleteWallP, 1),
       DeleteBulletP: toBoolean(JSON.parse(param.HitBulletP).DeleteBulletP, true),
       HitCommonP: toNumber(JSON.parse(param.HitBulletP).HitCommonP, 0),
       HitTargetP: toNumber(JSON.parse(param.HitBulletP).HitTargetP, 0),
       HitSwitchP: toNumber(JSON.parse(param.HitBulletP).HitSwitchP, 0),
-      easingTypeP: setDefault(param.EasingTypeP, "linear"),
     };
 
     params.targetP = param.TargetP ? param.TargetP.split(',').map(str => {
@@ -1006,27 +1718,113 @@
       }
     }).flat() : [];
 
-    const Messagelimit = params.Messagelimit;
-    const PBulletSwitch = params.PBulletSwitch;
-    const AnglefixedP = params.AnglefixedP;
-    const AngleP = params.AngleP;
-    const speedP = params.speedP;
-    const nameP = params.nameP;
-    const blendModeP = params.blendModeP;
-    const spaceP = params.spaceP;
-    let numberP = params.numberP;
-    const targetP = params.targetP;
+    let PBulletSwitch = params.PBulletSwitch;
+    let Messagelimit = params.Messagelimit;
+    let se = params.se;
+    let nameP = params.nameP;
+    let numberP = params.numberP
+    let spaceP = params.spaceP;
+    let speedP = params.speedP;
+    let scaleYP = params.scaleYP;
+    let sizeXP = params.sizeXP;
+    let blendModeP = params.blendModeP;
+    let AnglefixedP = params.AnglefixedP;
+    let AngleP = params.AngleP;
+    let easingTypeP = params.easingTypeP;
+    let DeleteWallP = params.DeleteWallP;
+    let HitTargetP = params.HitTargetP;
+    let FollowP = params.FollowP;
+    let FollowTypeP = params.FollowTypeP;
+    let FollowSpeedP = params.FollowSpeedP;
+    let targetP = parseTargetP(params.targetP);
+    let TargetArrayP = parseTargetP(params.targetP);
     let transparencyCheckP = params.transparencyCheckP;
     let deletebulletP = params.DeleteBulletP;
     let hitcommonP = params.HitCommonP;
     let hitswitchP = params.HitSwitchP;
 
-    let numberPplus = 0;
-    PluginManager.registerCommand(pluginName, "BulletNumberPlus", function (args) {
-      params.numberPplus =Number(setDefault(args.BulletNumberP2, 1));
-      numberPplus= params.numberPplus;
-      numberP += numberPplus;
-      console.log(numberP)});
+    function parseTargetP(t) {
+      if (Array.isArray(t)) return t.map(Number).filter(n => !isNaN(n));
+      if (typeof t === "number") return [t];
+      if (typeof t === "string") {
+        return t.split(",").flatMap(part => {
+          const s = part.trim();
+          if (s === "") return [];
+          if (s.includes("~")) {
+            const [a, b] = s.split("~").map(Number);
+            if (isNaN(a) || isNaN(b)) return [];
+            const min = Math.min(a, b), max = Math.max(a, b);
+            return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+          } else {
+            const n = Number(s);
+            return isNaN(n) ? [] : [n];
+          }
+        });
+      }
+      return [];
+    }
+
+    PluginManager.registerCommand(pluginName, "BulletSettingChange", function (args) {
+
+      const params = {
+        PBulletSwitch: setDefault(JSON.parse(args.BulletChange).PBulletSwitchChange, PBulletSwitch),
+        Messagelimit: setDefault(JSON.parse(args.BulletChange).MessagelimitChange, Messagelimit),
+        se: setDefault(JSON.parse(args.BulletChange).SoundChange, se),
+        nameP: setDefault(JSON.parse(args.BulletChange).ImageChange, nameP),
+        numberP: toNumber(JSON.parse(args.BulletChange).BulletNumberChange, numberP),
+        spaceP: toNumber(JSON.parse(args.BulletChange).BulletSpaceChange, spaceP),
+        speedP: toNumber(JSON.parse(args.BulletChange).BulletSpeedChange, speedP),
+        scaleYP: toNumber(JSON.parse(args.BulletChange).BulletSizeYChange, scaleYP),
+        sizeXP: toNumber(JSON.parse(args.BulletChange).BulletSizeXChange, sizeXP),
+        targetP: toNumber(JSON.parse(args.BulletChange).TargetChange, targetP),
+        transparencyCheckP: toBoolean(JSON.parse(args.BulletChange).TransparencyCheckChange, transparencyCheckP),
+        blendModeP: toNumber(JSON.parse(args.BulletChange).blendModeChange, blendModeP),
+        AnglefixedP: setDefault(JSON.parse(args.BulletChange).AnglefixedChange, AnglefixedP),
+        AngleP: setDefault(JSON.parse(args.BulletChange).AngleSetChange, AngleP),
+        easingTypeP: setDefault(JSON.parse(args.BulletChange).EasingChange, easingTypeP),
+        DeleteWallP: toNumber(JSON.parse(args.BulletChange).DeleteWallChange, DeleteWallP),
+        deletebulletP: toBoolean(JSON.parse(args.BulletChange).DeleteBulletChange, deletebulletP),
+        HitTargetP: toNumber(JSON.parse(args.HitBulletChange).HitTargetChange, HitTargetP),
+        hitcommonP: toNumber(JSON.parse(args.HitBulletChange).HitCommonChange, hitcommonP),
+        hitswitchP: toNumber(JSON.parse(args.HitBulletChange).HitSwitchChange, hitswitchP),
+        FollowP: toBoolean(JSON.parse(JSON.parse(args.BulletChange).EventFollowChange).FollowChange, FollowP),
+        FollowTypeP: toNumber(JSON.parse(JSON.parse(args.BulletChange).EventFollowChange).FollowMethodChange, FollowTypeP),
+        FollowSpeedP: toNumber(JSON.parse(JSON.parse(args.BulletChange).EventFollowChange).FollowSpeedChange, FollowSpeedP)
+      };
+
+      PBulletSwitch = params.PBulletSwitch;
+      Messagelimit = params.Messagelimit;
+      se = params.se;
+      nameP = params.nameP;
+      numberP = params.numberP;
+      spaceP = params.spaceP;
+      speedP = params.speedP;
+      scaleYP = params.scaleYP;
+      sizeXP = params.sizeXP;
+      blendModeP = params.blendModeP;
+      AngleP = params.AngleP;
+      easingTypeP = params.easingTypeP;
+      DeleteWallP = params.DeleteWallP;
+      HitTargetP = params.HitTargetP;
+      FollowP = params.FollowP;
+      FollowTypeP = params.FollowTypeP;
+      FollowSpeedP = params.FollowSpeedP;
+      targetP = parseTargetP(params.targetP);
+      TargetArrayP = parseTargetP(params.targetP);
+      transparencyCheckP = params.transparencyCheckP;
+      deletebulletP = params.deletebulletP;
+      hitcommonP = params.hitcommonP;
+      hitswitchP = params.hitswitchP;
+    });
+
+    if (typeof numberP === 'string' && numberP.match(/\\v\[\d+\]/)) {
+      const variableId = Number(numberP.match(/\d+/)[0]);
+      numberP = $gameVariables.value(variableId);
+    } else if (isNaN(Number(numberP))) {
+      numberP = $gameVariables.value(Number(numberP));
+    } else {
+      numberP = Number(numberP);
+    }
 
     if (nothit == "true") {
 
@@ -1041,107 +1839,193 @@
       hitcommonP = params.HitCommonP;
       hitswitchP = params.HitSwitchP;
     };
-    
+
+    let totalBullets = 0;
+    let hitCount = 0;
+
     setKey(shot);
 
     Scene_Map.prototype.updatekey = function () {
-      if (Messagelimit == true){
+      if (Messagelimit == true) {
         if ($gameMessage && $gameMessage.isBusy()) {
-        return;}}
-      if (!PBulletSwitch == 0 || !PBulletSwitch == ""){
-        if ($gameSwitches && $gameSwitches.value(PBulletSwitch)){
-        return;}}
-      
+          return;
+        }
+      }
+      if (!PBulletSwitch == 0 || !PBulletSwitch == "") {
+        if ($gameSwitches && $gameSwitches.value(PBulletSwitch)) {
+          return;
+        }
+      }
+
       if (Input.isTriggered("Shot")) {
         Scene_Map.prototype.playerShot()
       }
     }
 
-      // 一度だけupdateMainをオーバーライド
-  if (!Scene_Map.prototype._isUpdatedMainOverridden) {
-    const _Scene_Map_updateMain = Scene_Map.prototype.updateMain;
-    Scene_Map.prototype.updateMain = function () {
-      _Scene_Map_updateMain.call(this);
-      Scene_Map.prototype.updatekey();
-      updateShotPictureP()
+    // 一度だけupdateMainをオーバーライド
+    if (!Scene_Map.prototype._isUpdatedMainOverridden) {
+      const _Scene_Map_updateMain = Scene_Map.prototype.updateMain;
+      Scene_Map.prototype.updateMain = function () {
+        _Scene_Map_updateMain.call(this);
+        Scene_Map.prototype.updatekey();
+        updateShotPictureP()
+      }
+      Scene_Map.prototype._isUpdatedMainOverridden = true;
     }
-    Scene_Map.prototype._isUpdatedMainOverridden = true;
-  }
 
-  
-  let hasCollisionOccurred = false;
+    function updateShotPictureP() {
+      const playerSprite = getPlayerSprite();
+      if (!playerSprite) return;
 
-  function updateShotPictureP() {
-    spritesP.forEach((sprite, index) => {
-      if (!sprite || sprite._destroyed) return; // スプライトが存在しないか、削除されている場合は処理をスキップ
-      sprite._elapsedTime += 1 / 60;
-      const easedTime = sprite._easingFunction(sprite._elapsedTime);
-      
-      // 弾の位置をイージング関数で更新
-      sprite._mapX = sprite._originX + sprite._moveX * easedTime;
-      sprite._mapY = sprite._originY + sprite._moveY * easedTime;
-  
-      sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
-      sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
-  
-      const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
-      const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
-      if ($gameMap.regionId(mapX, mapY) == params.DeleteWallP) {
-        SceneManager._scene.removeChild(sprite);
-        sprite._destroyed = true; // 削除フラグを設定
-        spritesP.splice(index, 1);
-        return;
+      if (!$gameMessage.isBusy() && !$gameMap._interpreter.isRunning()) {
+
+        if (updateShotPictureP._pendingHitsSwitch && updateShotPictureP._pendingHitsSwitch.length > 0) {
+          const switchvalue = updateShotPictureP._pendingHitsSwitch[0];
+          if (switchvalue.hitSwitchId != 0 && $gameSwitches.value(switchvalue.hitSwitchId) == false) {
+            const next = updateShotPictureP._pendingHitsSwitch.shift();
+            $gameSwitches.setValue(next.hitSwitchId, true);
+          }
+        }
+
+        if (updateShotPictureP._pendingHits && updateShotPictureP._pendingHits.length > 0) {
+          const next = updateShotPictureP._pendingHits.shift();
+          if (HitTargetP != 0) $gameVariables.setValue(HitTargetP, next.eventId);
+          $gameTemp.reserveCommonEvent(next.commonEventId);
+        }
       }
-      
-      const player = $gamePlayer;
-      const playerSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
-      if (!playerSprite) {
-        return;
-      }
-  
-      if (transparencyCheckP == true) {
+
+      spritesP.forEach((sprite, index) => {
+        if (!sprite || sprite._destroyed) return;
+        sprite._elapsedTime += 1 / 60;
+
+        const baseSpeed = sprite._speed ?? 0.3;
+        let speed;
+
+        switch (easingTypeP) {
+          case "linear":
+            speed = baseSpeed;
+            break;
+          case "easeIn":
+            speed = baseSpeed * (1 + sprite._elapsedTime * 1.5);
+            break;
+
+          case "easeOut":
+            speed = Math.max(baseSpeed * (1 - sprite._elapsedTime * 0.2), 0.5);
+            break;
+
+          default:
+            speed = baseSpeed;
+            break;
+        }
+
+        if (sprite._followTarget && sprite._followSpeed > 0) {
+          const target = sprite._followTarget;
+          const tw = $gameMap.tileWidth();
+          const th = $gameMap.tileHeight();
+
+          let targetX = $gameMap.adjustX(target.x) * tw + tw / 2;
+          let targetY = $gameMap.adjustY(target.y) * th + th / 2;
+
+          const dx = targetX - sprite.x;
+          const dy = targetY - sprite.y;
+          const targetAngle = Math.atan2(dy, dx);
+
+          if (sprite._angle == null) sprite._angle = targetAngle;
+
+          let angleDiff = ((targetAngle - sprite._angle + Math.PI) % (Math.PI * 2)) - Math.PI;
+          const baseTurn = 0.001;
+          const turnPower = Math.pow(sprite._followSpeed || 1, 1.5);
+          const turnSpeed = baseTurn * turnPower * (sprite._speed ?? 1);
+
+          if (angleDiff > turnSpeed) sprite._angle += turnSpeed;
+          else if (angleDiff < -turnSpeed) sprite._angle -= turnSpeed;
+          else sprite._angle = targetAngle;
+
+          sprite.rotation = sprite._angle;
+          sprite._moveX = Math.cos(sprite._angle);
+          sprite._moveY = Math.sin(sprite._angle);
+
+          sprite.x += sprite._moveX * speed;
+          sprite.y += sprite._moveY * speed;
+        }
+        else {
+          sprite._moveX = Math.cos(sprite._angle);
+          sprite._moveY = Math.sin(sprite._angle);
+
+          sprite.x += sprite._moveX * speed;
+          sprite.y += sprite._moveY * speed;
+        }
+
+        const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
+        const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
+        if ($gameMap.regionId(mapX, mapY) == DeleteWallP) {
+          SceneManager._scene.removeChild(sprite);
+          sprite._destroyed = true;
+          spritesP.splice(index, 1);
+          return;
+        }
+
+        let hit = false;
+        let hitEvent = null;
+        const targets = [];
+
+        if (targetP.includes(-1))
+          targets.push({ type: "player", sprite: playerSprite, event: null });
+
         $gameMap.events().forEach(event => {
-          const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
-          if (eventSprite && targetP.includes(event.eventId())) {
-            const nottransparency = checkCollision(eventSprite, sprite);
-            if (nottransparency) {
-              if (deletebulletP == true) {
-                SceneManager._scene.removeChild(sprite);
-                sprite._destroyed = true;
-                sprites.splice(index, 1);
-              }
-              if (hasCollisionOccurred) return;
-              $gameVariables.setValue(params.HitTargetP,event.eventId())
-              $gameTemp.reserveCommonEvent(hitcommonP);
-              $gameSwitches.setValue(hitswitchP, true);
-              hasCollisionOccurred = true;
-              return;
-            }
+          if (targetP.includes(event.eventId())) {
+            const eventSprite = SceneManager._scene._spriteset._characterSprites.find(eSprite => eSprite._character === event);
+            if (eventSprite) targets.push({ type: "event", sprite: eventSprite, event });
           }
         });
-      } else {
-        $gameMap.events().forEach(event => {
-          const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
-          if (eventSprite && targetP.includes(event.eventId())) {
-            const collisionPoints = checkCollision(eventSprite, sprite);
-            if (collisionPoints && collisionPoints.length > 0) {
-              if (deletebulletP == true) {
-                SceneManager._scene.removeChild(sprite);
-                sprite._destroyed = true;
-                sprites.splice(index, 1);
-              }
-              if (hasCollisionOccurred) return;
-              $gameVariables.setValue(params.HitTargetP,event.eventId())
-              $gameTemp.reserveCommonEvent(hitcommonP);
-              $gameSwitches.setValue(hitswitchP, true);
-              hasCollisionOccurred = true;
-              return;
+
+        for (const t of targets) {
+          if (transparencyCheckP) {
+            if (polygonsIntersect(
+              getPolygonVertices(t.sprite.x, t.sprite.y - t.sprite.height / 2,
+                t.sprite.width * t.sprite.scale.x, t.sprite.height * t.sprite.scale.y, t.sprite.rotation),
+              getPolygonVertices(sprite.x, sprite.y,
+                sprite.width * sprite.scale.x, sprite.height * sprite.scale.y, sprite.rotation)
+            )) {
+              hit = true;
+              hitEvent = t.event;
+              break;
+            }
+          } else {
+            const points = checkCollision(t.sprite, sprite);
+            if (points && points.length > 0) {
+              hit = true;
+              hitEvent = t.event;
+              break;
             }
           }
-        });
-      }
-    });
-  }
+        }
+
+        if (hit) {
+          if (deletebulletP) {
+            SceneManager._scene.removeChild(sprite);
+            sprite._destroyed = true;
+            spritesP.splice(index, 1);
+          }
+
+          hitCount++;
+          if (hitCount <= totalBullets) {
+            const eventId = hitEvent ? hitEvent.eventId() : 1;
+
+            updateShotPictureP._pendingHitsSwitch = updateShotPictureP._pendingHitsSwitch || [];
+            updateShotPictureP._pendingHitsSwitch.push({ hitSwitchId: hitswitchP });
+
+            updateShotPictureP._pendingHits = updateShotPictureP._pendingHits || [];
+            updateShotPictureP._pendingHits.push({
+              eventId,
+              commonEventId: hitcommonP
+            });
+          }
+          return;
+        }
+      });
+    }
+
     Scene_Map.prototype.updatekey();
     const directions = {
       8: -Math.PI / 2,     // 下
@@ -1176,23 +2060,22 @@
         let saveAmgle = saveAmgle1;
         saveAmgle1 = lastbaseAngle;
         lastbaseAngle = directions[playerDirection];  // 歩いている間は移動方向を更新
-        if (lastbaseAngle == undefined) { lastbaseAngle = saveAmgle;}
-      } 
+        if (lastbaseAngle == undefined) { lastbaseAngle = saveAmgle; }
+      }
     };
 
     Scene_Map.prototype.playerShot = function () {
-      params.se = setDefault(param.SoundP, "");
-      if (params.se) {
-        AudioManager.playSe({ "name": params.se, "volume": 50, "pitch": 100, "pan": 0 });
-      }
 
-      hasCollisionOccurred = false;
+      se = setDefault(param.SoundP, "");
+      if (se) {
+        AudioManager.playSe({ "name": se, "volume": 50, "pitch": 100, "pan": 0 });
+      }
 
       const player = $gamePlayer;
       const playerSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
       if (!playerSprite) {
         return;
-    }
+      }
 
       const playermapX = player.x;
       const playermapY = player.y;
@@ -1211,64 +2094,108 @@
         };
         const playerDirection = Input.dir8;
         baseAngle = directions[playerDirection];
-        if (baseAngle == undefined) { baseAngle = lastbaseAngle;}
+        if (baseAngle == undefined) { baseAngle = lastbaseAngle; }
       } else {
         baseAngle = lastbaseAngle;  // 止まっている間は直前の移動方向に基づいて角度を計算
       }
-      if(AnglefixedP==true){
+      if (AnglefixedP == true) {
         baseAngle = directions[AngleP];
       };
 
-      const easingFunctionsP = {
-        "linear": t => t,
-        "easeIn": t => t * t,
-        "easeOut": t => t * (2 - t),
-      };
-    
-      const easingFunctionP = easingFunctionsP[params.easingTypeP] || easingFunctionsP.linear;
-
-      const distance = 0.5; // プレイヤーからの距離
+      const distance = 0.5;
       const offsetX = distance * Math.cos(baseAngle);
       const offsetY = distance * Math.sin(baseAngle);
 
-      const picX = playermapX + 0.5 + offsetX; // 弾を発射するX座標
-      const picY = playermapY + 0.5 + offsetY; // 弾を発射するY座標
-      const scaleX = params.scaleYP * params.sizeXP;
-      const scaleY = params.scaleYP;
+      const picX = playermapX + 0.5 + offsetX;
+      const picY = playermapY + 0.5 + offsetY;
       const newSprites = [];
       for (let i = 0; i < numberP; i++) {
         const angleOffset = (i - (numberP - 1) / 2) * (spaceP * Math.PI / 180);
         const rotation = 90 * (spaceP * Math.PI / 180);
         const angle = baseAngle + angleOffset;
 
-        const sprite = new Sprite(ImageManager.loadBitmap('img/', nameP));
+        const sprite = new Sprite(autoLoadImage(nameP));
         sprite._mapX = picX;
         sprite._mapY = picY;
         sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
         sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
-        sprite.scale.x = scaleX / 100;
-        sprite.scale.y = scaleY / 100;
+        sprite.scale.x = (scaleYP * sizeXP) / 100;
+        sprite.scale.y = scaleYP / 100;
         sprite.anchor.x = 0.5;
         sprite.anchor.y = 0.5;
         sprite.blendMode = blendModeP;
-        sprite.rotation = angle + rotation; // 弾の角度を設定
+        sprite.rotation = angle + rotation;
 
-        sprite._moveX = speedP * Math.cos(angle);
-        sprite._moveY = speedP * Math.sin(angle);
+        const speedPerFrame = speedP;
+        sprite._moveX = speedPerFrame * Math.cos(angle);
+        sprite._moveY = speedPerFrame * Math.sin(angle);
         sprite._originX = picX;
         sprite._originY = picY;
-        sprite._speed = speedP;
-        sprite._easingFunction = easingFunctionP;
+        sprite._speed = speedPerFrame / 5;
         sprite._elapsedTime = 0;
 
+        sprite._initialAngle = angle;
+        sprite._angle = angle;
+
+        sprite._followTarget = null;
+        sprite._followSpeed = 0;
+
         spritesP.push(sprite);
+        assignFollowTargetsP();
         SceneManager._scene.addChild(sprite);
+
       }
 
-      spritesP = spritesP.concat(newSprites); 
+      totalBullets = spritesP.length;
+      hitCount = 0;
+
+      function assignFollowTargetsP() {
+        if (!FollowP) return;
+        const targetIds = TargetArrayP.slice();
+        const events = targetIds.map(id => $gameMap.event(id)).filter(e => e);
+
+        if (events.length === 0) return;
+
+        const targetData = events.map(ev => {
+          const dx = ev.x - picX;
+          const dy = ev.y - picY;
+          return { event: ev, dist: Math.sqrt(dx * dx + dy * dy) };
+        }).sort((a, b) => a.dist - b.dist);
+
+        const followSpeedValue = FollowSpeedP;
+
+        for (let i = 0; i < spritesP.length; i++) {
+          const sp = spritesP[i];
+
+          if (sp._followTarget && sp._followTarget._exists) continue;
+
+          let chosen;
+          switch (String(FollowTypeP)) {
+            case "near":
+              chosen = targetData[0].event;
+              break;
+            case "far":
+              chosen = targetData[targetData.length - 1].event;
+              break;
+            case "closestorder":
+              chosen = targetData[i % targetData.length].event;
+              break;
+            case "random":
+              chosen = targetData[Math.floor(Math.random() * targetData.length)].event;
+              break;
+            default:
+              chosen = targetData[0].event;
+          }
+
+          sp._followTarget = chosen;
+          sp._followSpeed = followSpeedValue;
+        }
+      }
+
+      spritesP = spritesP.concat(newSprites);
 
 
-      
+
       if (!Scene_Map.prototype._isTerminatedOverridden) {
         const _Scene_Map_terminate = Scene_Map.prototype.terminate;
         Scene_Map.prototype.terminate = function () {
@@ -1277,87 +2204,91 @@
         };
         Scene_Map.prototype._isTerminatedOverridden = true;
       }
-  
+
       updateShotPictureP();
     }
   }
 
-
   PluginManager.registerCommand(pluginName, "AddBullet", function (args) {
+    function safeParse(objOrStr, fallback = {}) {
+      try {
+        if (typeof objOrStr === "string") return JSON.parse(objOrStr);
+        if (typeof objOrStr === "object" && objOrStr !== null) return objOrStr;
+      } catch (e) { }
+      return fallback;
+    }
+
+    const eventFollow = safeParse(args.EventFollow, {});
+    const hitBullet = safeParse(args.HitBullet, {});
+
     const params = {
       se: setDefault(args.Sound, ""),
       name: setDefault(args.Image, ""),
-      number: Number(setDefault(args.BulletNumber, 1)),
-      space: Number(setDefault(args.BulletSpace, 1)),
-      speed: Number(setDefault(args.BulletSpeed, 10)),
-      scaleY: Number(setDefault(args.BulletSizeY, 10)),
-      sizeX: Number(setDefault(args.BulletSizeX, 1)),
+      number: toNumber(args.BulletNumber, 1),
+      space: toNumber(args.BulletSpace, 1),
+      speed: toNumber(args.BulletSpeed, 10),
+      scaleY: toNumber(args.BulletSizeY, 10),
+      sizeX: toNumber(args.BulletSizeX, 1),
       target: setDefault(args.Target, -1),
-      transparencyCheck: setDefault(args.TransparencyCheck, false),
-      blendMode: Number(setDefault(args.blendMode, 0)),
-      PlayerTarget: setDefault(args.PlayerTarget, true),
+      transparencyCheck: toBoolean(args.TransparencyCheck, false),
+      blendMode: toNumber(args.blendMode, 0),
+      PlayerTarget: toBoolean(args.PlayerTarget, true),
       Angle: setDefault(args.Angle, 0),
-      easingType: setDefault(args.EasingType, "linear"),
-      DeleteWall: Number(setDefault(args.DeleteWall, 1)),
-      deletebullet: toBoolean(JSON.parse(args.HitBullet).DeleteBullet, true),
-      HitTarget: toNumber(JSON.parse(args.HitBullet).HitTarget, 0),
-      hitcommon: toNumber(JSON.parse(args.HitBullet).HitCommon, 0),
-      hitswitch: toNumber(JSON.parse(args.HitBullet).HitSwitch, 0)
+      easingType: setDefault(args.Easing, "linear"),
+      DeleteWall: toNumber(args.DeleteWall, 1),
+      deletebullet: toBoolean(hitBullet.DeleteBullet, true),
+      HitTarget: toNumber(hitBullet.HitTarget, 0),
+      hitcommon: toNumber(hitBullet.HitCommon, 0),
+      hitswitch: toNumber(hitBullet.HitSwitch, 0),
+      Follow: toBoolean(eventFollow.Follow, false),
+      FollowSpeed: toNumber(eventFollow.FollowSpeed, 20),
+      FollowType: setDefault(eventFollow.FollowMethod, "near"),
     };
-  
-    if (params.se) {
-      AudioManager.playSe({ "name": params.se, "volume": 50, "pitch": 100, "pan": 0 });
+
+    function parseTarget(t) {
+      if (Array.isArray(t)) return t.map(Number).filter(n => !isNaN(n));
+      if (typeof t === "number") return [t];
+      if (typeof t === "string") {
+        return t.split(",").flatMap(part => {
+          const s = part.trim();
+          if (s === "") return [];
+          if (s.includes("~")) {
+            const [a, b] = s.split("~").map(Number);
+            if (isNaN(a) || isNaN(b)) return [];
+            const min = Math.min(a, b), max = Math.max(a, b);
+            return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+          } else {
+            const n = Number(s);
+            return isNaN(n) ? [] : [n];
+          }
+        });
+      }
+      return [];
     }
-  
-    const easingFunctions = {
-      "linear": t => t,
-      "easeIn": t => t * t,
-      "easeOut": t => t * (2 - t),
-    };
-  
-    const easingFunction = easingFunctions[params.easingType] || easingFunctions.linear;
-  
-    let target = params.target;
-    if (target !== -1) {
-      target = target ? target.split(',').flatMap(str => {
-        if (str.includes('~')) {
-          const range = str.split('~').map(Number);
-          const [start, end] = range;
-          return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-        } else {
-          return [Number(str)];
-        }
-      }) : [];
+
+    let number = params.number
+    if (typeof number === 'string' && number.match(/\\v\[\d+\]/)) {
+      const variableId = Number(number.match(/\d+/)[0]);
+      number = $gameVariables.value(variableId);
+    } else if (isNaN(Number(number))) {
+      number = $gameVariables.value(Number(number));
+    } else {
+      number = Number(number);
     }
-  
-    const playerSprite = getPlayerSprite();
-    if (!playerSprite) { return; }
-  
-    const event = $gameMap.event(this._eventId);
-    const picX = event.x + 0.5;
-    const picY = event.y + 0.5;
-  
-    const scaleX = params.scaleY * params.sizeX;
-    const scaleY = params.scaleY;
-    const speed = params.speed / 20;
-    const name = params.name;
+
+    const target = parseTarget(params.target);
+    const TargetArray = parseTarget(params.target);
+    const speedPerFrame = params.speed;
+    const name = params.name.replace(/\.\w+$/, "");
     const blendMode = params.blendMode;
     const space = params.space;
-    const number = params.number;
-    const PlayerTarget = params.PlayerTarget;
     let Angle = params.Angle;
-    if (typeof Angle === 'string' && Angle.match(/\\v\[\d+\]/)) {
-      const variableId = Number(Angle.match(/\d+/)[0]);
-      Angle = $gameVariables.value(variableId);
-    } else if (isNaN(Number(Angle))) {
-      Angle = $gameVariables.value(Number(Angle));
-    } else {
-      Angle = Number(Angle);
-    }
     let deletebullet = params.deletebullet;
     let hitcommon = params.hitcommon;
     let hitswitch = params.hitswitch;
     let transparencyCheck = params.transparencyCheck;
+    let TargetX = 0;
+    let TargetY = 0;
 
     if (nothit == "true") {
 
@@ -1372,175 +2303,316 @@
       hitcommon = params.hitcommon;
       hitswitch = params.hitswitch;
     };
-  
-    let Direction = 0;
-    let TargetX = 0;
-    let TargetY = 0;
-    let DistanceX = 0;
-    let DistanceY = 0;
-    let radian1 = 0;
-    let radian2 = (90 * Math.PI) / 180;
-    let radian = 0;
-    let baseAngle = 0;
-    let TargetHeight = 0;
-    Angle = (Angle * Math.PI) / 180;
-    if (PlayerTarget === "true") {
-      if (target == -1) {
-        TargetHeight = playerSprite.height;
-        TargetX = $gamePlayer.x;
-        TargetY = $gamePlayer.y;
-      } else {
-        $gameMap.events().forEach(event => {
-          const eventSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === event);
-          if (!eventSprite) return;
-          TargetHeight = eventSprite.height;
-          TargetX = event.x;
-          TargetY = event.y;
-        });
-      }
-  
-      DistanceX = TargetX - picX;
-      DistanceY = TargetY - picY;
-  
-      radian1 = Math.atan2(DistanceY, DistanceX);
-      radian = radian1 + radian2;
-      baseAngle = radian - Math.PI / 2;
-    } else {
-      const directions = {
-        8: -Math.PI / 2,     // 下
-        9: -Math.PI / 4,     // 右下
-        6: 0,                // 右
-        3: Math.PI / 4,      // 右上
-        2: Math.PI / 2,      // 上
-        1: 3 * Math.PI / 4,   // 左上
-        4: Math.PI,          // 左
-        7: -3 * Math.PI / 4 // 左下
-      };
-      Direction = directions[$gameMap.event(this._eventId).direction()];
-      baseAngle = Direction + Angle;
+
+    if (params.se) {
+      AudioManager.playSe({ name: params.se, volume: 50, pitch: 100, pan: 0 });
     }
-  
+
+    const playerSprite = getPlayerSprite();
+    if (!playerSprite) return;
+
+    const event = $gameMap.event(this._eventId);
+    const picX = event.x + 0.5;
+    const picY = event.y + 0.5;
+
     let sprites = [];
+
     for (let i = 0; i < number; i++) {
+
+      if (typeof Angle === 'string' && Angle.match(/\\v\[\d+\]/)) {
+        const variableId = Number(Angle.match(/\d+/)[0]);
+        Angle = $gameVariables.value(variableId);
+      } else if (isNaN(Number(Angle))) {
+        Angle = $gameVariables.value(Number(Angle));
+      } else {
+        Angle = Number(Angle);
+      }
+      const AnglePI = (Angle * Math.PI) / 180
+
+      let baseAngle = 0;
+      if (params.PlayerTarget === true || params.PlayerTarget === "true") {
+        if (target == -1) {
+          TargetX = $gamePlayer.x + 0.5;
+          TargetY = $gamePlayer.y + 0.5;
+        } else {
+          if (target.length > 1) {
+            target.forEach(e => {
+              const event = $gameMap.event(e);
+              if (event) {
+                TargetX = event.x + 0.5;
+                TargetY = event.y + 0.5;
+              }
+              const dx = TargetX - picX;
+              const dy = TargetY - picY;
+              const radian1 = Math.atan2(dy, dx);
+              const radian2 = (90 * Math.PI) / 180;
+              baseAngle = radian1 + radian2 - Math.PI / 2;
+            })
+          }
+          else if (target.length == 1) {
+            const event = $gameMap.event(target);
+            if (event) {
+              TargetX = event.x + 0.5;
+              TargetY = event.y + 0.5;
+            }
+            const dx = TargetX - picX;
+            const dy = TargetY - picY;
+            const radian1 = Math.atan2(dy, dx);
+            const radian2 = (90 * Math.PI) / 180;
+            baseAngle = radian1 + radian2 - Math.PI / 2;
+          }
+        }
+
+      } else {
+
+        const directions = {
+          8: -Math.PI / 2,
+          9: -Math.PI / 4,
+          6: 0,
+          3: Math.PI / 4,
+          2: Math.PI / 2,
+          1: 3 * Math.PI / 4,
+          4: Math.PI,
+          7: -3 * Math.PI / 4
+        };
+        const dir = $gameMap.event(this._eventId).direction();
+        baseAngle = (directions[dir] || 0) + AnglePI;
+      }
+
       const angleOffset = (i - (number - 1) / 2) * (space * Math.PI / 180);
       const angle = baseAngle + angleOffset;
-      const sprite = new Sprite(ImageManager.loadBitmap('img/', name));
+
+      const sprite = new Sprite(autoLoadImage(name));
       sprite._mapX = picX;
       sprite._mapY = picY;
       sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
       sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
-      sprite.scale.x = scaleX / 100;
-      sprite.scale.y = scaleY / 100;
+      sprite.scale.x = (params.scaleY * params.sizeX) / 100;
+      sprite.scale.y = params.scaleY / 100;
       sprite.anchor.x = 0.5;
       sprite.anchor.y = 0.5;
       sprite.blendMode = blendMode;
-      sprite.rotation = angle + radian2;
-  
-      sprite._moveX = speed * Math.cos(angle);
-      sprite._moveY = speed * Math.sin(angle);
+      sprite.rotation = angle + (90 * Math.PI) / 180;
+
+      sprite._moveX = speedPerFrame * Math.cos(angle);
+      sprite._moveY = speedPerFrame * Math.sin(angle);
       sprite._originX = picX;
       sprite._originY = picY;
-      sprite._speed = speed;
-      sprite._easingFunction = easingFunction;
+      sprite._speed = speedPerFrame / 5;
       sprite._elapsedTime = 0;
-  
+
+      sprite._initialAngle = angle;
+      sprite._angle = angle;
+
+      sprite._followTarget = null;
+      sprite._followSpeed = 0;
+
       sprites.push(sprite);
+      assignFollowTargets();
       SceneManager._scene.addChild(sprite);
     }
-  
-    let hasCollisionOccurred = false;
+
+    function assignFollowTargets() {
+      if (!params.Follow) return;
+      const targetIds = TargetArray.slice();
+      const events = targetIds.map(id => $gameMap.event(id)).filter(e => e);
+
+      if (events.length === 0) return;
+
+      const targetData = events.map(ev => {
+        const dx = ev.x - picX;
+        const dy = ev.y - picY;
+        return { event: ev, dist: Math.sqrt(dx * dx + dy * dy) };
+      }).sort((a, b) => a.dist - b.dist);
+
+      const followSpeedValue = params.FollowSpeed;
+
+      for (let i = 0; i < sprites.length; i++) {
+        const sp = sprites[i];
+
+        if (sp._followTarget && sp._followTarget._exists) continue;
+
+        let chosen;
+        switch (String(params.FollowType)) {
+          case "near":
+            chosen = targetData[0].event;
+            break;
+          case "far":
+            chosen = targetData[targetData.length - 1].event;
+            break;
+          case "closestorder":
+            chosen = targetData[i % targetData.length].event;
+            break;
+          case "random":
+            chosen = targetData[Math.floor(Math.random() * targetData.length)].event;
+            break;
+          default:
+            chosen = targetData[0].event;
+        }
+
+        sp._followTarget = chosen;
+        sp._followSpeed = followSpeedValue;
+      }
+    }
+
+    let totalBullets = sprites.length;
+    let hitCount = 0;
 
     function updateShotPicture() {
-      sprites.forEach((sprite, index) => {
-          if (!sprite || sprite._destroyed) return; // スプライトが存在しないか、削除されている場合は処理をスキップ
+      const playerSprite = getPlayerSprite();
+      if (!playerSprite) return;
 
-              // 経過時間を更新
-              sprite._elapsedTime += 1 / 60;
-  
-              // イージング関数を適用
-              const easedTime = sprite._easingFunction(sprite._elapsedTime);
-  
-              // マップ座標の更新
-              sprite._mapX += sprite._moveX * easedTime;
-              sprite._mapY += sprite._moveY * easedTime;
-  
-              // 画面上の座標を計算
-              sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
-              sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
-  
-              // マップの座標を取得
-              const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
-              const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
-  
-              // マップ領域の確認とスプライトの削除
-              if ($gameMap.regionId(mapX, mapY) == params.DeleteWall) {
-                  SceneManager._scene.removeChild(sprite);
-                  sprite._destroyed = true; // 削除フラグを設定
-                  sprites.splice(index, 1); // スプライトを配列から削除
-                  return; // 処理を終了して次のスプライトへ
-              }
-  
-              const playerSprite = getPlayerSprite();
-              if (!playerSprite) return;
-  
-              // 透明チェック処理
-              if (transparencyCheck === true) {
-                  let nottransparency = checkCollision(playerSprite, sprite);
-  
-                  $gameMap.events().forEach(event => {
-                      if (target !== -1) {
-                          const eventSprite = SceneManager._scene._spriteset._characterSprites.find(eSprite => eSprite._character === event);
-                          if (!eventSprite) return;
-                          if (eventSprite && target.includes(event.eventId())) {
-                              nottransparency = checkCollision(eventSprite, sprite);
-                          }
-                      }
-                  });
-  
-                  if (nottransparency) {
-                      if (deletebullet === true) {
-                          SceneManager._scene.removeChild(sprite);
-                          sprite._destroyed = true; // 削除フラグを設定
-                          sprites.splice(index, 1); // スプライトを配列から削除
-                      }
-                      if (hasCollisionOccurred) return;
-                      $gameVariables.setValue(params.HitTarget, event.eventId());
-                      $gameTemp.reserveCommonEvent(hitcommon);
-                      $gameSwitches.setValue(hitswitch, true);
-                      hasCollisionOccurred = true;
-                      return; // 次のスプライトへ
-                  }
-              } else {
-                  let collisionPoints = checkCollision(playerSprite, sprite);
-  
-                  $gameMap.events().forEach(event => {
-                      const eventSprite = SceneManager._scene._spriteset._characterSprites.find(eSprite => eSprite._character === event);
-                      if (target !== -1) {
-                          if (eventSprite && target.includes(event.eventId())) {
-                              collisionPoints = checkCollision(eventSprite, sprite);
-                          }
-                      }
-                  });
-  
-                  if (collisionPoints && collisionPoints.length > 0) {
-                      if (deletebullet === true) {
-                          SceneManager._scene.removeChild(sprite);
-                          sprite._destroyed = true; // 削除フラグを設定
-                          sprites.splice(index, 1); // スプライトを配列から削除
-                      }
-                      if (hasCollisionOccurred) return;
-                      $gameVariables.setValue(params.HitTarget, event.eventId());
-                      $gameTemp.reserveCommonEvent(hitcommon);
-                      $gameSwitches.setValue(hitswitch, true);
-                      hasCollisionOccurred = true;
-                      return; // 次のスプライトへ
-                  }
-              }
+      if (!$gameMessage.isBusy() && !$gameMap._interpreter.isRunning()) {
+
+        if (updateShotPicture._pendingHitsSwitch && updateShotPicture._pendingHitsSwitch.length > 0) {
+          const switchvalue = updateShotPicture._pendingHitsSwitch[0];
+          if (switchvalue.hitSwitchId != 0 && $gameSwitches.value(switchvalue.hitSwitchId) == false) {
+            const next = updateShotPicture._pendingHitsSwitch.shift();
+            $gameSwitches.setValue(next.hitSwitchId, true);
+          }
+        }
+
+        if (updateShotPicture._pendingHits && updateShotPicture._pendingHits.length > 0) {
+          const next = updateShotPicture._pendingHits.shift();
+          if (params.HitTarget != 0) $gameVariables.setValue(params.HitTarget, next.eventId);
+          $gameTemp.reserveCommonEvent(next.commonEventId);
+        }
+      }
+
+      sprites.forEach((sprite, index) => {
+        if (!sprite || sprite._destroyed) return;
+        sprite._elapsedTime += 1 / 60;
+
+        const baseSpeed = sprite._speed ?? 0.3;
+        let speed;
+
+        switch (params.easingType) {
+          case "linear":
+            speed = baseSpeed;
+            break;
+          case "easeIn":
+            speed = baseSpeed * (1 + sprite._elapsedTime * 1.5);
+            break;
+
+          case "easeOut":
+            speed = Math.max(baseSpeed * (1 - sprite._elapsedTime * 0.2), 0.5);
+            break;
+
+          default:
+            speed = baseSpeed;
+            break;
+        }
+
+        if (sprite._followTarget && sprite._followSpeed > 0) {
+          const target = sprite._followTarget;
+          const tw = $gameMap.tileWidth();
+          const th = $gameMap.tileHeight();
+
+          let targetX = $gameMap.adjustX(target.x) * tw + tw / 2;
+          let targetY = $gameMap.adjustY(target.y) * th + th / 2;
+
+          const dx = targetX - sprite.x;
+          const dy = targetY - sprite.y;
+          const targetAngle = Math.atan2(dy, dx);
+
+          if (sprite._angle == null) sprite._angle = targetAngle;
+
+          let angleDiff = ((targetAngle - sprite._angle + Math.PI) % (Math.PI * 2)) - Math.PI;
+          const baseTurn = 0.001;
+          const turnPower = Math.pow(sprite._followSpeed || 1, 1.5);
+          const turnSpeed = baseTurn * turnPower * (sprite._speed ?? 1);
+
+          if (angleDiff > turnSpeed) sprite._angle += turnSpeed;
+          else if (angleDiff < -turnSpeed) sprite._angle -= turnSpeed;
+          else sprite._angle = targetAngle;
+
+          sprite.rotation = sprite._angle;
+          sprite._moveX = Math.cos(sprite._angle);
+          sprite._moveY = Math.sin(sprite._angle);
+
+          sprite.x += sprite._moveX * speed;
+          sprite.y += sprite._moveY * speed;
+        }
+        else {
+          sprite._moveX = Math.cos(sprite._angle);
+          sprite._moveY = Math.sin(sprite._angle);
+
+          sprite.x += sprite._moveX * speed;
+          sprite.y += sprite._moveY * speed;
+        }
+
+        const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
+        const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
+        if ($gameMap.regionId(mapX, mapY) == params.DeleteWall) {
+          SceneManager._scene.removeChild(sprite);
+          sprite._destroyed = true;
+          sprites.splice(index, 1);
+          return;
+        }
+
+        const playerSprite = getPlayerSprite();
+        if (!playerSprite) return;
+
+        let hit = false;
+        let hitEvent = null;
+        const targets = [];
+
+        if (target.includes(-1))
+          targets.push({ type: "player", sprite: playerSprite, event: null });
+
+        $gameMap.events().forEach(event => {
+          if (target.includes(event.eventId())) {
+            const eventSprite = SceneManager._scene._spriteset._characterSprites.find(eSprite => eSprite._character === event);
+            if (eventSprite) targets.push({ type: "event", sprite: eventSprite, event });
+          }
+        });
+
+        for (const t of targets) {
+          if (transparencyCheck) {
+            if (polygonsIntersect(
+              getPolygonVertices(t.sprite.x, t.sprite.y - t.sprite.height / 2,
+                t.sprite.width * t.sprite.scale.x, t.sprite.height * t.sprite.scale.y, t.sprite.rotation),
+              getPolygonVertices(sprite.x, sprite.y,
+                sprite.width * sprite.scale.x, sprite.height * sprite.scale.y, sprite.rotation)
+            )) {
+              hit = true;
+              hitEvent = t.event;
+              break;
+            }
+          } else {
+            const points = checkCollision(t.sprite, sprite);
+            if (points && points.length > 0) {
+              hit = true;
+              hitEvent = t.event;
+              break;
+            }
+          }
+        }
+
+        if (hit) {
+          if (deletebullet) {
+            SceneManager._scene.removeChild(sprite);
+            sprite._destroyed = true;
+            sprites.splice(index, 1);
+          }
+
+          hitCount++;
+          if (hitCount <= totalBullets) {
+            const eventId = hitEvent ? hitEvent.eventId() : -1;
+
+            updateShotPicture._pendingHitsSwitch = updateShotPicture._pendingHitsSwitch || [];
+            updateShotPicture._pendingHitsSwitch.push({ hitSwitchId: hitswitch });
+
+            updateShotPicture._pendingHits = updateShotPicture._pendingHits || [];
+            updateShotPicture._pendingHits.push({
+              eventId,
+              commonEventId: hitcommon
+            });
+          }
+          return;
+        }
       });
-  
-  
     }
-  
 
 
     const _Scene_Map_updateMain = Scene_Map.prototype.updateMain;
@@ -1548,18 +2620,20 @@
       _Scene_Map_updateMain.call(this);
       Scene_Map.prototype.terminate = function () {
         _Scene_Map_terminate.call(this);
-        sprites.forEach((sprite) => {SceneManager._scene.removeChild(sprite);
-        sprites.splice(sprites.indexOf(sprite), 1);})
+        sprites.forEach((sprite) => {
+          SceneManager._scene.removeChild(sprite);
+          sprites.splice(sprites.indexOf(sprite), 1);
+        })
         spritesP = [];
         sprites = [];
       };
       updateShotPicture();
     };
   });
-  
+
   function getPlayerSprite() {
     const player = $gamePlayer;
     return SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
   }
 
-  })();
+})();
