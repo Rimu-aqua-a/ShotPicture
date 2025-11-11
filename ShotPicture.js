@@ -22,6 +22,11 @@
  * 
  * ■Update history
  * 
+ * 11/04 ver1.51・Fixed bug.
+ * 　　　　　　  ・Implemented a feature that allows players to 
+ * 　　　　　　　  toggle whether to fire or not.
+ * 　　　　　　  ・Implemented a function that allows followers to 
+ * 　　　　　　　  fire bullets at the same time as the player.
  * 11/04 ver1.50・Fixed bug.
  * 　　　　　　  ・Added homing function
  * 　　　　　　  ・Supports image encryption
@@ -51,8 +56,14 @@
  * ※I'm using Google Translate.
  * 
  * @param PlayerBullet
- * @text Whether the player fires bullets
+ * @text Player fires bullets
  * @desc Allows players to fire bullets.
+ * @type boolean
+ * @default false
+ * 
+ * @param FollowerBullet
+ * @text Follower fires a bullet
+ * @desc Makes the follower fire bullets at the same time as the player.
  * @type boolean
  * @default false
  * 
@@ -91,6 +102,18 @@
  * @command BulletSettingChange
  * @text Change the player bullet settings
  * @desc Change the settings of the bullets the player shoots
+ * 
+ * @arg PlayerBulletChange
+ * @text Player can fire or toggle projectiles
+ * @desc Allows the player to toggle whether or not the projectile fires.
+ * @type boolean
+ * @default true
+ * 
+ * @arg FollowerBulletChange
+ * @text Follower fires a bullet
+ * @desc Toggles whether followers fire bullets at the same time as the player.
+ * @type boolean
+ * @default false
  * 
  * @arg LimitChange
  * @text Fire limit setting
@@ -681,7 +704,9 @@
  * 
  * 
  * ■更新履歴
- * 
+ * 11/04 ver1.51・バグを修正
+ * 　　　　　　  ・自機の発射切り替えを可能にする機能を実装
+ * 　　　　　　  ・隊列メンバーにも自機と同時に発射させる機能を実装
  * 11/04 ver1.50・バグを修正
  * 　　　　　　  ・ホーミング機能を追加
  * 　　　　　　  ・画像の暗号化に対応
@@ -706,6 +731,12 @@
  * @param PlayerBullet
  * @text 自機が弾を発射するか
  * @desc 自機が弾を発射できるようになります。
+ * @type boolean
+ * @default false
+ * 
+ * @param FollowerBullet
+ * @text 隊列メンバーが弾を発射するか
+ * @desc 隊列メンバーに自機と同時に弾を発射させます。
  * @type boolean
  * @default false
  * 
@@ -745,6 +776,18 @@
  * @command BulletSettingChange
  * @text 自機の弾設定変更
  * @desc 自機の撃つ弾の設定を変更します
+ * 
+ * @arg PlayerBulletChange
+ * @text 自機が弾を発射するか
+ * @desc 自機の弾の発射を切り替えられます。
+ * @type boolean
+ * @default true
+ * 
+ * @arg FollowerBulletChange
+ * @text 隊列メンバーが弾を発射するか
+ * @desc 隊列メンバーに自機と同時に弾を発射させるか切り替えられます。
+ * @type boolean
+ * @default false
  * 
  * @arg LimitChange
  * @text 発射制限設定
@@ -856,6 +899,12 @@
  * @text 被弾対象
  * @desc 被弾する対象です。プレイヤーの場合は-1、イベントの場合はIDを入力してください。(複数可「1,2,3」、「1~3」など)
  * @default -1
+ * 
+ * @arg TargetFollowers
+ * @text 隊列を対象にする
+ * @type boolean
+ * @desc 隊列の仲間を対象にするかどうかです。
+ * @default false
  * 
  * @arg TransparencyCheck
  * @text 不透明度が無い所を判定するか
@@ -1678,11 +1727,12 @@
     }
   }
 
-  params.PlayerBullet = setDefault(param.PlayerBullet, false);
-  const PlayerBullet = params.PlayerBullet;
+  params.PlayerBullet = toBoolean(param.PlayerBullet, false);
+  let PlayerBullet = params.PlayerBullet;
 
-  if (PlayerBullet == "true") {
+  if (PlayerBullet == true) {
     const params = {
+      FollowerBullet: toBoolean(param.FollowerBullet, false),
       PBulletSwitch: toNumber(JSON.parse(param.LimitSetP).PBulletSwitch, 0),
       Messagelimit: toBoolean(JSON.parse(param.LimitSetP).Messagelimit, true),
       nameP: setDefault(JSON.parse(param.BulletSetP).ImageP, ""),
@@ -1718,6 +1768,7 @@
       }
     }).flat() : [];
 
+    let FollowerBullet = params.FollowerBullet;
     let PBulletSwitch = params.PBulletSwitch;
     let Messagelimit = params.Messagelimit;
     let se = params.se;
@@ -1767,6 +1818,8 @@
     PluginManager.registerCommand(pluginName, "BulletSettingChange", function (args) {
 
       const params = {
+        PlayerBulletChange: toBoolean(JSON.parse(args.BulletChange).PlayerBulletChange, PlayerBullet),
+        FollowerBulletChange: toBoolean(JSON.parse(args.BulletChange).FollowerBulletChange, FollowerBullet),
         PBulletSwitch: setDefault(JSON.parse(args.BulletChange).PBulletSwitchChange, PBulletSwitch),
         Messagelimit: setDefault(JSON.parse(args.BulletChange).MessagelimitChange, Messagelimit),
         se: setDefault(JSON.parse(args.BulletChange).SoundChange, se),
@@ -1792,6 +1845,8 @@
         FollowSpeedP: toNumber(JSON.parse(JSON.parse(args.BulletChange).EventFollowChange).FollowSpeedChange, FollowSpeedP)
       };
 
+      PlayerBullet = params.PlayerBullet;
+      FollowerBullet = params.FollowerBullet;
       PBulletSwitch = params.PBulletSwitch;
       Messagelimit = params.Messagelimit;
       se = params.se;
@@ -1898,6 +1953,11 @@
         if (!sprite || sprite._destroyed) return;
         sprite._elapsedTime += 1 / 60;
 
+        if (sprite._mapX == null || sprite._mapY == null) {
+          sprite._mapX = $gamePlayer.x;
+          sprite._mapY = $gamePlayer.y;
+        }
+
         const baseSpeed = sprite._speed ?? 0.3;
         let speed;
 
@@ -1908,26 +1968,24 @@
           case "easeIn":
             speed = baseSpeed * (1 + sprite._elapsedTime * 1.5);
             break;
-
           case "easeOut":
             speed = Math.max(baseSpeed * (1 - sprite._elapsedTime * 0.2), 0.5);
             break;
-
           default:
             speed = baseSpeed;
             break;
         }
 
+        const tw = $gameMap.tileWidth();
+        const th = $gameMap.tileHeight();
+
         if (sprite._followTarget && sprite._followSpeed > 0) {
           const target = sprite._followTarget;
-          const tw = $gameMap.tileWidth();
-          const th = $gameMap.tileHeight();
+          const targetMapX = target._mapX ?? target.x ?? $gamePlayer.x;
+          const targetMapY = target._mapY ?? target.y ?? $gamePlayer.y;
 
-          let targetX = $gameMap.adjustX(target.x) * tw + tw / 2;
-          let targetY = $gameMap.adjustY(target.y) * th + th / 2;
-
-          const dx = targetX - sprite.x;
-          const dy = targetY - sprite.y;
+          const dx = targetMapX - sprite._mapX;
+          const dy = targetMapY - sprite._mapY;
           const targetAngle = Math.atan2(dy, dx);
 
           if (sprite._angle == null) sprite._angle = targetAngle;
@@ -1942,19 +2000,15 @@
           else sprite._angle = targetAngle;
 
           sprite.rotation = sprite._angle;
-          sprite._moveX = Math.cos(sprite._angle);
-          sprite._moveY = Math.sin(sprite._angle);
-
-          sprite.x += sprite._moveX * speed;
-          sprite.y += sprite._moveY * speed;
+          sprite._mapX += Math.cos(sprite._angle) * (speed / tw);
+          sprite._mapY += Math.sin(sprite._angle) * (speed / th);
         }
         else {
-          sprite._moveX = Math.cos(sprite._angle);
-          sprite._moveY = Math.sin(sprite._angle);
-
-          sprite.x += sprite._moveX * speed;
-          sprite.y += sprite._moveY * speed;
+          sprite._mapX += Math.cos(sprite._angle) * (speed / tw);
+          sprite._mapY += Math.sin(sprite._angle) * (speed / th);
         }
+        sprite.x = $gameMap.adjustX(sprite._mapX) * tw + tw / 2;
+        sprite.y = $gameMap.adjustY(sprite._mapY) * th + th / 2;
 
         const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
         const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
@@ -1968,9 +2022,6 @@
         let hit = false;
         let hitEvent = null;
         const targets = [];
-
-        if (targetP.includes(-1))
-          targets.push({ type: "player", sprite: playerSprite, event: null });
 
         $gameMap.events().forEach(event => {
           if (targetP.includes(event.eventId())) {
@@ -2041,7 +2092,6 @@
     let lastbaseAngle = directions[2];
 
 
-    // プレイヤーの移動方向を追跡するため、Game_Playerクラスをオーバーライドする
     const _Game_Player_moveByInput = Game_Player.prototype.moveByInput;
     Game_Player.prototype.moveByInput = function () {
       _Game_Player_moveByInput.call(this);
@@ -2059,23 +2109,21 @@
         const playerDirection = Input.dir8;
         let saveAmgle = saveAmgle1;
         saveAmgle1 = lastbaseAngle;
-        lastbaseAngle = directions[playerDirection];  // 歩いている間は移動方向を更新
+        lastbaseAngle = directions[playerDirection];
         if (lastbaseAngle == undefined) { lastbaseAngle = saveAmgle; }
       }
     };
 
     Scene_Map.prototype.playerShot = function () {
 
-      se = setDefault(param.SoundP, "");
+      se = setDefault(JSON.parse(param.BulletSetP).SoundP, "");
       if (se) {
         AudioManager.playSe({ "name": se, "volume": 50, "pitch": 100, "pan": 0 });
       }
 
       const player = $gamePlayer;
-      const playerSprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
-      if (!playerSprite) {
-        return;
-      }
+      const playerSprite = getPlayerSprite();
+      if (!playerSprite) return;
 
       const playermapX = player.x;
       const playermapY = player.y;
@@ -2096,7 +2144,7 @@
         baseAngle = directions[playerDirection];
         if (baseAngle == undefined) { baseAngle = lastbaseAngle; }
       } else {
-        baseAngle = lastbaseAngle;  // 止まっている間は直前の移動方向に基づいて角度を計算
+        baseAngle = lastbaseAngle;
       }
       if (AnglefixedP == true) {
         baseAngle = directions[AngleP];
@@ -2106,8 +2154,8 @@
       const offsetX = distance * Math.cos(baseAngle);
       const offsetY = distance * Math.sin(baseAngle);
 
-      const picX = playermapX + 0.5 + offsetX;
-      const picY = playermapY + 0.5 + offsetY;
+      const picX = playermapX + offsetX;
+      const picY = playermapY + offsetY;
       const newSprites = [];
       for (let i = 0; i < numberP; i++) {
         const angleOffset = (i - (numberP - 1) / 2) * (spaceP * Math.PI / 180);
@@ -2143,7 +2191,63 @@
         spritesP.push(sprite);
         assignFollowTargetsP();
         SceneManager._scene.addChild(sprite);
+      }
 
+      if (FollowerBullet) {
+        const followers = $gamePlayer.followers()._data.filter(f => f && f.isVisible());
+        const directions = {
+          8: -Math.PI / 2,     // 上
+          9: -Math.PI / 4,     // 右上
+          6: 0,                // 右
+          3: Math.PI / 4,      // 右下
+          2: Math.PI / 2,      // 下
+          1: 3 * Math.PI / 4,  // 左下
+          4: Math.PI,          // 左
+          7: -3 * Math.PI / 4  // 左上
+        };
+
+        for (const follower of followers) {
+          const dir = follower.direction();
+          const baseAngle = directions[dir] ?? 0;
+
+          const tw = $gameMap.tileWidth();
+          const th = $gameMap.tileHeight();
+
+          const fx = follower.x;
+          const fy = follower.y;
+          const offsetX = 0.5 * Math.cos(baseAngle);
+          const offsetY = 0.5 * Math.sin(baseAngle);
+
+          const shotX = fx + offsetX;
+          const shotY = fy + offsetY;
+
+          for (let i = 0; i < numberP; i++) {
+            const angleOffset = (i - (numberP - 1) / 2) * (spaceP * Math.PI / 180);
+            const angle = baseAngle + angleOffset;
+
+            const sprite = new Sprite(autoLoadImage(nameP));
+            sprite._mapX = shotX;
+            sprite._mapY = shotY;
+            sprite.x = $gameMap.adjustX(sprite._mapX) * tw + tw / 2;
+            sprite.y = $gameMap.adjustY(sprite._mapY) * th + th / 2;
+            sprite.anchor.set(0.5, 0.5);
+            sprite.scale.x = (scaleYP * sizeXP) / 100;
+            sprite.scale.y = scaleYP / 100;
+            sprite.blendMode = blendModeP;
+            sprite.rotation = angle;
+
+            sprite._speed = speedP / 5;
+            sprite._elapsedTime = 0;
+            sprite._angle = angle;
+            sprite._initialAngle = angle;
+            sprite._followTarget = null;
+            sprite._followSpeed = 0;
+
+            spritesP.push(sprite);
+            assignFollowTargetsP();
+            SceneManager._scene.addChild(sprite);
+          }
+        }
       }
 
       totalBullets = spritesP.length;
@@ -2153,6 +2257,11 @@
         if (!FollowP) return;
         const targetIds = TargetArrayP.slice();
         const events = targetIds.map(id => $gameMap.event(id)).filter(e => e);
+
+        const playerSprite = getPlayerSprite();
+
+        if (targetIds.includes(-1) && playerSprite)
+          events.push(playerSprite);
 
         if (events.length === 0) return;
 
@@ -2230,6 +2339,7 @@
       scaleY: toNumber(args.BulletSizeY, 10),
       sizeX: toNumber(args.BulletSizeX, 1),
       target: setDefault(args.Target, -1),
+      targetfollowers: setDefault(args.TargetFollowers, false),
       transparencyCheck: toBoolean(args.TransparencyCheck, false),
       blendMode: toNumber(args.blendMode, 0),
       PlayerTarget: toBoolean(args.PlayerTarget, true),
@@ -2287,8 +2397,6 @@
     let hitcommon = params.hitcommon;
     let hitswitch = params.hitswitch;
     let transparencyCheck = params.transparencyCheck;
-    let TargetX = 0;
-    let TargetY = 0;
 
     if (nothit == "true") {
 
@@ -2312,10 +2420,26 @@
     if (!playerSprite) return;
 
     const event = $gameMap.event(this._eventId);
-    const picX = event.x + 0.5;
-    const picY = event.y + 0.5;
+    const picX = event.x;
+    const picY = event.y;
 
     let sprites = [];
+    const targetIds = TargetArray.slice();
+    const events = targetIds.map(id => $gameMap.event(id)).filter(e => e);
+    const followers = [];
+
+    if (targetIds.includes(-1) && playerSprite) {
+      events.push(playerSprite);
+      if (params.targetfollowers === true || params.targetfollowers === "true") {
+        for (let i = 1; i < $gameParty.size(); i++) {
+          const follower = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === $gamePlayer.followers().follower(i - 1));
+          events.push(follower);
+          followers.push(follower);
+        }
+      }
+    }
+
+    if (events.length === 0) return;
 
     for (let i = 0; i < number; i++) {
 
@@ -2331,40 +2455,42 @@
 
       let baseAngle = 0;
       if (params.PlayerTarget === true || params.PlayerTarget === "true") {
-        if (target == -1) {
-          TargetX = $gamePlayer.x + 0.5;
-          TargetY = $gamePlayer.y + 0.5;
-        } else {
-          if (target.length > 1) {
-            target.forEach(e => {
-              const event = $gameMap.event(e);
-              if (event) {
-                TargetX = event.x + 0.5;
-                TargetY = event.y + 0.5;
-              }
-              const dx = TargetX - picX;
-              const dy = TargetY - picY;
-              const radian1 = Math.atan2(dy, dx);
-              const radian2 = (90 * Math.PI) / 180;
-              baseAngle = radian1 + radian2 - Math.PI / 2;
-            })
-          }
-          else if (target.length == 1) {
-            const event = $gameMap.event(target);
-            if (event) {
-              TargetX = event.x + 0.5;
-              TargetY = event.y + 0.5;
+        const character = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === $gamePlayer);
+        let dx = 0;
+        let dy = 0;
+
+        const sortedTargets = events
+          .map(ev => {
+            if (ev == character) {
+              ev = character._character;
+              dx = ev._x - picX;
+              dy = ev._y - picY;
+            } else if ((params.targetfollowers === true || params.targetfollowers === "true") && followers.includes(ev)) {
+              ev = ev._character;
+              dx = ev.x - picX;
+              dy = ev.y - picY;
+            } else {
+              dx = ev.x - picX;
+              dy = ev.y - picY;
             }
-            const dx = TargetX - picX;
-            const dy = TargetY - picY;
-            const radian1 = Math.atan2(dy, dx);
-            const radian2 = (90 * Math.PI) / 180;
-            baseAngle = radian1 + radian2 - Math.PI / 2;
-          }
+            return { event: ev, dist: Math.sqrt(dx * dx + dy * dy) };
+          })
+          .sort((a, b) => a.dist - b.dist);
+
+        const nearest = sortedTargets[0];
+        if (nearest && nearest.event) {
+          const targetEvent = nearest.event;
+          const TargetX = targetEvent.x;
+          const TargetY = targetEvent.y;
+
+          const dx = TargetX - picX;
+          const dy = TargetY - picY;
+          const radian1 = Math.atan2(dy, dx);
+          const radian2 = (90 * Math.PI) / 180;
+          baseAngle = radian1 + radian2 - Math.PI / 2;
         }
 
       } else {
-
         const directions = {
           8: -Math.PI / 2,
           9: -Math.PI / 4,
@@ -2381,21 +2507,20 @@
 
       const angleOffset = (i - (number - 1) / 2) * (space * Math.PI / 180);
       const angle = baseAngle + angleOffset;
+      const tw = $gameMap.tileWidth();
+      const th = $gameMap.tileHeight();
 
       const sprite = new Sprite(autoLoadImage(name));
       sprite._mapX = picX;
       sprite._mapY = picY;
-      sprite.x = $gameMap.adjustX(sprite._mapX) * $gameMap.tileWidth();
-      sprite.y = $gameMap.adjustY(sprite._mapY) * $gameMap.tileHeight();
-      sprite.scale.x = (params.scaleY * params.sizeX) / 100;
-      sprite.scale.y = params.scaleY / 100;
-      sprite.anchor.x = 0.5;
-      sprite.anchor.y = 0.5;
-      sprite.blendMode = blendMode;
+      sprite.x = $gameMap.adjustX(sprite._mapX) * tw;
+      sprite.y = $gameMap.adjustY(sprite._mapY) * th;
+      sprite.anchor.set(0.5, 0.5);
+      sprite.scale.set((params.scaleY * params.sizeX) / 100, params.scaleY / 100);
       sprite.rotation = angle + (90 * Math.PI) / 180;
-
       sprite._moveX = speedPerFrame * Math.cos(angle);
       sprite._moveY = speedPerFrame * Math.sin(angle);
+      sprite.blendMode = blendMode;
       sprite._originX = picX;
       sprite._originY = picY;
       sprite._speed = speedPerFrame / 5;
@@ -2409,7 +2534,9 @@
 
       sprites.push(sprite);
       assignFollowTargets();
-      SceneManager._scene.addChild(sprite);
+      setTimeout(() => {
+        SceneManager._scene.addChild(sprite);
+      }, 1);
     }
 
     function assignFollowTargets() {
@@ -2417,13 +2544,40 @@
       const targetIds = TargetArray.slice();
       const events = targetIds.map(id => $gameMap.event(id)).filter(e => e);
 
+      const playerSprite = getPlayerSprite();
+
+      if (targetIds.includes(-1) && playerSprite) {
+        events.push(playerSprite);
+        if (params.targetfollowers === true || params.targetfollowers === "true") {
+          for (let i = 1; i < $gameParty.size(); i++) {
+            const follower = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === $gamePlayer.followers().follower(i - 1));
+            events.push(follower);
+          }
+        }
+      }
+
       if (events.length === 0) return;
 
-      const targetData = events.map(ev => {
-        const dx = ev.x - picX;
-        const dy = ev.y - picY;
-        return { event: ev, dist: Math.sqrt(dx * dx + dy * dy) };
-      }).sort((a, b) => a.dist - b.dist);
+      const character = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === $gamePlayer);
+      let dx = 0;
+      let dy = 0;
+
+      const targetData = events
+        .map(ev => {
+          if (ev == character) {
+            ev = character._character;
+            dx = ev._x - picX;
+            dy = ev._y - picY;
+          } else if ((params.targetfollowers === true || params.targetfollowers === "true") && followers.includes(ev)) {
+            ev = ev._character;
+            dx = ev.x - picX;
+            dy = ev.y - picY;
+          } else {
+            dx = ev.x - picX;
+            dy = ev.y - picY;
+          }
+          return { event: ev, dist: Math.sqrt(dx * dx + dy * dy) };
+        }).sort((a, b) => a.dist - b.dist);
 
       const followSpeedValue = params.FollowSpeed;
 
@@ -2493,26 +2647,24 @@
           case "easeIn":
             speed = baseSpeed * (1 + sprite._elapsedTime * 1.5);
             break;
-
           case "easeOut":
             speed = Math.max(baseSpeed * (1 - sprite._elapsedTime * 0.2), 0.5);
             break;
-
           default:
             speed = baseSpeed;
             break;
         }
 
+        const tw = $gameMap.tileWidth();
+        const th = $gameMap.tileHeight();
+
         if (sprite._followTarget && sprite._followSpeed > 0) {
           const target = sprite._followTarget;
-          const tw = $gameMap.tileWidth();
-          const th = $gameMap.tileHeight();
+          const targetMapX = (target._mapX != null) ? (target._mapX) : (target.x);
+          const targetMapY = (target._mapY != null) ? (target._mapY) : (target.y);
 
-          let targetX = $gameMap.adjustX(target.x) * tw + tw / 2;
-          let targetY = $gameMap.adjustY(target.y) * th + th / 2;
-
-          const dx = targetX - sprite.x;
-          const dy = targetY - sprite.y;
+          const dx = targetMapX - sprite._mapX;
+          const dy = targetMapY - sprite._mapY;
           const targetAngle = Math.atan2(dy, dx);
 
           if (sprite._angle == null) sprite._angle = targetAngle;
@@ -2527,22 +2679,18 @@
           else sprite._angle = targetAngle;
 
           sprite.rotation = sprite._angle;
-          sprite._moveX = Math.cos(sprite._angle);
-          sprite._moveY = Math.sin(sprite._angle);
-
-          sprite.x += sprite._moveX * speed;
-          sprite.y += sprite._moveY * speed;
+          sprite._mapX += Math.cos(sprite._angle) * (speed / tw);
+          sprite._mapY += Math.sin(sprite._angle) * (speed / th);
         }
         else {
-          sprite._moveX = Math.cos(sprite._angle);
-          sprite._moveY = Math.sin(sprite._angle);
-
-          sprite.x += sprite._moveX * speed;
-          sprite.y += sprite._moveY * speed;
+          sprite._mapX += Math.cos(sprite._angle) * (speed / tw);
+          sprite._mapY += Math.sin(sprite._angle) * (speed / th);
         }
+        sprite.x = $gameMap.adjustX(sprite._mapX) * tw + tw / 2;
+        sprite.y = $gameMap.adjustY(sprite._mapY) * th + th / 2;
 
-        const mapX = Math.round(((sprite.x - $gamePlayer.screenX()) / 48) + $gamePlayer.x);
-        const mapY = Math.round(((sprite.y - $gamePlayer.screenY()) / 48) + $gamePlayer.y);
+        const mapX = Math.round(sprite._mapX);
+        const mapY = Math.round(sprite._mapY);
         if ($gameMap.regionId(mapX, mapY) == params.DeleteWall) {
           SceneManager._scene.removeChild(sprite);
           sprite._destroyed = true;
@@ -2550,15 +2698,18 @@
           return;
         }
 
-        const playerSprite = getPlayerSprite();
-        if (!playerSprite) return;
-
         let hit = false;
         let hitEvent = null;
         const targets = [];
 
-        if (target.includes(-1))
+        if (target.includes(-1)) {
           targets.push({ type: "player", sprite: playerSprite, event: null });
+          if (params.targetfollowers === true || params.targetfollowers === "true") {
+            for (let i = 1; i < $gameParty.size(); i++) {
+              targets.push({ type: "Follower", sprite: getFollowerSprite(i), event: null });
+            }
+          }
+        }
 
         $gameMap.events().forEach(event => {
           if (target.includes(event.eventId())) {
@@ -2634,6 +2785,11 @@
   function getPlayerSprite() {
     const player = $gamePlayer;
     return SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character === player);
+  }
+
+  function getFollowerSprite(i) {
+    const sprite = SceneManager._scene._spriteset._characterSprites.find(sprite => sprite._character._memberIndex == i)
+    return sprite;
   }
 
 })();
