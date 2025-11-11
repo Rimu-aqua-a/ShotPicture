@@ -22,7 +22,7 @@
  * 
  * ■Update history
  * 
- * 11/04 ver1.51・Fixed bug.
+ * 11/11 ver1.51・Fixed bug.
  * 　　　　　　  ・Implemented a feature that allows players to 
  * 　　　　　　　  toggle whether to fire or not.
  * 　　　　　　  ・Implemented a function that allows followers to 
@@ -704,7 +704,7 @@
  * 
  * 
  * ■更新履歴
- * 11/04 ver1.51・バグを修正
+ * 11/11 ver1.51・バグを修正
  * 　　　　　　  ・自機の発射切り替えを可能にする機能を実装
  * 　　　　　　  ・隊列メンバーにも自機と同時に発射させる機能を実装
  * 11/04 ver1.50・バグを修正
